@@ -14,13 +14,20 @@
 // http://www.ai-contest.com/resources.
 """
 
+
 from PlanetWars import PlanetWars
+import logging
+mb_logger = logging.getLogger('MyBot')
 
 def DoTurn(pw):
+  mb_logger.info('starting your turn!')
+
   # (1) If we currently have a fleet in flight, just do nothing.
+  mb_logger.info('checking currently fleet flights')
   if len(pw.MyFleets()) >= len(pw.MyPlanets()):
     return
   # (2) Find my strongest planet.
+  mb_logger.info('finding strongest source planet')
   source = -1
   source_score = -999999.0
   source_num_ships = 0
@@ -32,7 +39,9 @@ def DoTurn(pw):
       source = p.PlanetID()
       source_num_ships = p.NumShips()
 
+
   # (3) Find the weakest enemy or neutral planet.
+  mb_logger.info('finding weaking target planet')
   dest = -1
   dest_score = 999999.0
   dest_ships = 0
@@ -52,6 +61,7 @@ def DoTurn(pw):
 
   # (4) Send half the ships from my strongest planet to the weakest
   # planet that I do not own.
+  mb_logger.info('sending ships...')
   if source >= 0 and dest >= 0:
     distance = pw.Distance(source, dest)
     if dest_ships + (distance+1)*dest_growth +1 > source_num_ships:
@@ -59,6 +69,8 @@ def DoTurn(pw):
     else:
         num_ships = dest_ships + (distance+1)*dest_growth+1
     pw.IssueOrder(source, dest, num_ships)
+
+  mb_logger.info('turn done!')
 
 
 def main():
@@ -68,7 +80,9 @@ def main():
     if len(current_line) >= 2 and current_line.startswith("go"):
       pw = PlanetWars(map_data)
       DoTurn(pw)
+      mb_logger.warning('starting your turn!')
       pw.FinishTurn()
+      mb_logger.warning('finished your turn!')
       map_data = ''
     else:
       map_data += current_line + '\n'
