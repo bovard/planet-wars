@@ -51,7 +51,46 @@ class Planet:
     self._growth_rate = growth_rate
     self._x = x
     self._y = y
+    self._certain_control = []
+    self._threat_control = []
     pw_logger.debug('initializing successful!')
+    
+  def CalcCertainControl(self,turns,fleets):
+    pw_logger.debug('starting to calculate ceratin control for planet '+str(self._planet_id))
+    start = 0
+    if self._owner == 1:
+      start = self._num_ships
+      growth = self._growth_rate
+    elif self._owner == 2:
+      start = -self._num_ships
+      growth = -self._growth_rate
+    else:
+      start = -self._num_ships
+      growth = 0
+    self._certain_control.append(start)
+    pw_logger.debug('done initializing')
+    #TODO: Fix this it doesn't handle three ways correctly
+    value = 0
+    for i in range(1,turns):
+        if self._owner==3 and growth ==0:
+            if fleets[i]<0:
+                value = self._certain_control[i-1]-fleets[i]
+                if value > 0:
+                    value = -value
+                    #TODO: determine if I need to add growth on here
+                    growth = -self._growth_rate
+            elif fleets[i]>0:
+                  value = self._certain_control[i-1]-fleets[i]
+                  if value > 0:
+                    #TODO: determine if I need to add growth on here
+                    growth = self._growth_rate
+        else:
+            value = self._certain_control[i-1]+growth+fleets[i]
+            if value*growth<0:
+                growth = growth*-1
+        self._certain_control.append(value)
+    pw_logger.debug('done calculating!')
+        
 
   def PlanetID(self):
     return self._planet_id
@@ -88,26 +127,55 @@ class PlanetWars:
   def __init__(self, gameState):
     pw_logger.info('initializing planet wars')
     self._planets = []
+    self._planet_ids = []
     self._fleets = []
     self._distances = {}
     self._max_distance = -1
     self.ParseGameState(gameState)
     self.PopulateDistances()
+    self.CalcCertainControl()
+    self.CalcThreatControl()
     pw_logger.info('initialization of planet wars completed!')
+
+  def CalcThreatControl(self):
+    pw_logger.info('calculating each planet threat control')
+    #TODO: Implement this!
+
+  def CalcCertainControl(self):
+    pw_logger.info('calculating each planet ceratin control')
+    flights = dict.fromkeys(self._planet_ids)
+    pw_logger.debug('making the flight logs')
+    for i in self._planet_ids:
+        flights[i] = dict.fromkeys(range(1,self._max_distance),0)
+    pw_logger.debug('done')
+    pw_logger.debug('sorting fleets')
+    for f in self._fleets:
+        p = f.DestinationPlanet()
+        t = f.TurnsRemaining()
+        if f.Owner()==1:
+          value = f.NumShips()
+        else:
+          value = -f.NumShips()
+        flights[p][t]=flights[p][t]+value
+    pw_logger.debug('done')
+    pw_logger.debug('calculating certain control')
+    for p in self._planets:
+        p.CalcCertainControl(self._max_distance, flights[p.PlanetID()])
+    pw_logger.info('done!')
+
 
   def PopulateDistances(self):
     pw_logger.info('populating distances')
     #collects all the planet ids
-    planet_ids = []
     for p in self._planets:
-        planet_ids.append(p.PlanetID())
-    self._distances = dict.fromkeys(planet_ids)
+        self._planet_ids.append(p.PlanetID())
+    self._distances = dict.fromkeys(self._planet_ids)
 
     pw_logger.debug('dictionary creation complete!')
     #calculates and stores all the planet distances
-    numPlanets = len(planet_ids)
-    for i in planet_ids:
-        self._distances[i] = dict.fromkeys(planet_ids,0)
+    numPlanets = len(self._planet_ids)
+    for i in self._planet_ids:
+        self._distances[i] = dict.fromkeys(self._planet_ids,0)
     for i in range(0,numPlanets):
         for j in range(i+1,numPlanets):
             pw_logger.debug('calculating a distance')
@@ -115,7 +183,6 @@ class PlanetWars:
             pw_logger.debug('distance is ' + str(distance))
             self._distances[i][j]=distance
             self._distances[j][i]=distance
-            pw_logger.debug('done assigning distances')
             if distance > self._max_distance:
                 self._max_distance = distance
     pw_logger.info('max distance is '+ str(self._max_distance))
