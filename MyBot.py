@@ -14,63 +14,85 @@
 // http://www.ai-contest.com/resources.
 """
 
+import logging
 
 from PlanetWars import PlanetWars
-import logging
-mb_logger = logging.getLogger('MyBot')
 
 def DoTurn(pw):
-  mb_logger.info('starting your turn!')
 
-  # (1) If we currently have a fleet in flight, just do nothing.
-  mb_logger.info('checking currently fleet flights')
-  if len(pw.MyFleets()) >= len(pw.MyPlanets()):
-    return
   # (2) Find my strongest planet.
-  mb_logger.info('finding strongest source planet')
   source = -1
   source_score = -999999.0
   source_num_ships = 0
   my_planets = pw.MyPlanets()
+  logging.info('initializing')
   for p in my_planets:
-    score = float(p.NumShips())
-    if score > source_score:
-      source_score = score
-      source = p.PlanetID()
-      source_num_ships = p.NumShips()
+    score = p.NumShips()
+    logging.info('checking enemy fleets')
+    enemy_fleets = pw.EnemyFleets()
+    logging.info('grabbed enemy fleets')
+    for f in enemy_fleets:
+      logging.info('enumerating...')
+      if f.DestinationPlanet() == p.PlanetID():
+        logging.info('changing scrore')
+        score -= f.NumShips()
+    logging.info('done')
+    source_score = score
+    source = p.PlanetID()
+    source_num_ships = score
 
+    # (3) Find the weakest enemy or neutral planet.
+    logging.info('choosing target')
+    
+    dest_score = 99999999.0
+    dest = -1
+    dest_num_ships = 0
+    dest_owner = -1
+    dest_enemies = -1
+    dest_growth = -1
+    dest_distance = -1
+    dest_allies = -1
+    not_my_planets = pw.NotMyPlanets()
+    enemy_fleets = pw.EnemyFleets()
+    for p in not_my_planets:
+      if p.GrowthRate() > 0:
+        distance = pw.Distance(source, p.PlanetID())
+        enemies = 0
+        for f in enemy_fleets:
+          if f.DestinationPlanet() == p.PlanetID():
+            enemies = enemies + f.NumShips()
+        my_fleets = pw.MyFleets()
+        allies = 0
+        for f in my_fleets:
+          if f.DestinationPlanet() == p.PlanetID():
+            allies += f.NumShips()
+        if p.Owner() == 2:
+          score = distance + ((p.NumShips() + enemies + distance*p.GrowthRate())/(2*p.GrowthRate()))
+        if p.Owner() == 0:
+          score = distance + ((p.NumShips() + enemies)/p.GrowthRate())
+        if score < dest_score and enemies + p.NumShips() > allies:
+          dest_score = score
+          dest = p.PlanetID()
+          dest_num_ships = p.NumShips()
+          dest_owner = p.Owner()
+          dest_enemies = enemies
+          dest_growth = p.GrowthRate()
+          dest_distance = distance
+          dest_allies = allies
 
-  # (3) Find the weakest enemy or neutral planet.
-  mb_logger.info('finding weaking target planet')
-  dest = -1
-  dest_score = 999999.0
-  dest_ships = 0
-  dest_growth = 0
-  not_my_planets = pw.NotMyPlanets()
-  my_fleets = pw.MyFleets()
-  my_fleet_dest = []
-  for f in my_fleets:
-      my_fleet_dest.append(f.DestinationPlanet())
-  for p in not_my_planets:
-    score = p.NumShips()/p.GrowthRate()
-    if score < dest_score and not(p.PlanetID() in my_fleet_dest):
-      dest_score = score
-      dest = p.PlanetID()
-      dest_ships = p.NumShips()
-      dest_growth = p.GrowthRate()
-
+    logging.info('done')
   # (4) Send half the ships from my strongest planet to the weakest
   # planet that I do not own.
-  mb_logger.info('sending ships...')
-  if source >= 0 and dest >= 0:
-    distance = pw.Distance(source, dest)
-    if dest_ships + (distance+1)*dest_growth +1 > source_num_ships:
-        num_ships = source_num_ships
-    else:
-        num_ships = dest_ships + (distance+1)*dest_growth+1
-    pw.IssueOrder(source, dest, num_ships)
-
-  mb_logger.info('turn done!')
+    logging.info('sending fleets')
+    if source >= 0 and dest >= 0:
+      to_send = 0
+      if dest_owner == 2:
+        to_send = int(dest_num_ships + dest_enemies - dest_allies + dest_distance*dest_growth) + 1
+      if dest_owner == 0:
+        to_send = dest_num_ships + dest_enemies - dest_allies + 1
+      if source_num_ships > to_send and to_send > 0:
+        pw.IssueOrder(source, dest, to_send)
+    logging.info('done')
 
 
 def main():
@@ -80,9 +102,7 @@ def main():
     if len(current_line) >= 2 and current_line.startswith("go"):
       pw = PlanetWars(map_data)
       DoTurn(pw)
-      mb_logger.warning('starting your turn!')
       pw.FinishTurn()
-      mb_logger.warning('finished your turn!')
       map_data = ''
     else:
       map_data += current_line + '\n'
