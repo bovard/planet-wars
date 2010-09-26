@@ -44,24 +44,119 @@ class Fleet:
 class Planet:
   def __init__(self, planet_id, owner, num_ships, growth_rate, x, y):
     self._planet_id = planet_id
-    self._owner = owner
-    self._num_ships = num_ships
+    self._owner = []
+    self._owner.append(owner)
+    self._num_ships = []
+    self._num_ships.append(num_ships)
     self._growth_rate = growth_rate
     self._x = x
     self._y = y
+    self._neighbors = {}
+    self._allied_arrivals = []
+    self._enemy_arrivals = []
+    self._free_troops = []
+    self._allied_reinforcements=[]
 
+  # needs to be called once at the beginning of the game (done)
+  def InitArrivals(self, max):
+    for i in range(max+1):
+      self._allied_arrivals.append(0)
+      self._enemy_arrivals.append(0)
+
+
+  # this should be called before flights are processed (done)
+  def Update(self):
+    logging.debug('in Planet.Update() for planet ' + repr(self._planet_id))
+    self._enemy_arrivals = self._enemy_arrivals[1:]
+    self._enemy_arrivals.append(0)
+    self._allied_arrivals = self._allied_arrivals[1:]
+    self._allied_arrivals.append(0)
+    logging.debug('done')
+
+  # this should be called after troop levels are set (even when creating a planet!)(done)
+  def ResetFreeTroops(self):
+    self._allied_reinforcements=[]
+    self._allied_reinforcements.append(0)
+    self._free_troops = []
+    if self._owner == 1:
+      self._free_troops.append(self._num_ships)
+    elif self._owner == 2:
+      self._free_troops.append(-1*self._num_ships)
+
+  # this needs to be called every turn sequentailly to work
+  def CalcOwnerAndNumShips(self, turn):
+    levels = [0, self._enemy_arrivals[turn], self._allied_arrivals[turn]+self._allied_reinforcements[turn]]
+    levels[self._owner[turn-1]] += self._num_ships[turn-1]
+    if not(owner[turn-1] == 0):
+      levels[self._owner[turn-1]] += self._growth_rate
+    max = -1
+    for i in levels:
+      if i>max:
+        max = i
+    if count(max)>1:
+       self._owner.append(self._owner[turn-1])
+       self._num_ships.append(0)
+    else:
+      self._owner.append(levels.index(max))
+      levels[levels.index(max)]=0
+      max2 = -1
+      for i in levels:
+        if i>max2:
+          max2=i
+      self._num_ships.append(max-max2)
+
+
+  # this needs to be called every turn sequentially to work, call at the begginning of the turn
+  def SetFreeTroops(self, turn):
+    levels = [0, self._enemy_arrivals[turn], self._allied_arrivals[turn]]
+    if not(owner[turn-1] == 0):
+      levels[self._owner[turn-1]] += self._growth_rate
+    max = -1
+    for i in levels:
+      if i>max:
+        max = i
+    owner = levels.index(max)
+    if count(max)>1:
+       self._free_troops.append(0)
+    else:
+      levels[levels.index(max)]=0
+      max2 = -1
+      for i in levels:
+        if i>max2:
+          max2=i
+      if owner==1:
+        self._num_ships.append(max-max2)
+      elif owner==2:
+        self._num_ships.append(max2-max)
+      else:
+        self._num_ships.append(0)
+
+
+  #called once at the beggining of the game (done)
+  def CreateNeighbor(self, max):
+    for i in range(1,max+1):
+      self._neighbors[i]=[]
+
+  def AddNeighbor(self, distance, p):
+    self._neighbors[distance].append(p)
+
+  def GetNeighbors(self, distance):
+    return self._neighbors[distance]
+  
   def PlanetID(self):
     return self._planet_id
 
   def Owner(self, new_owner=None):
     if new_owner == None:
-      return self._owner
-    self._owner = new_owner
+      return self._owner[0]
+    self._owner = []
+    self._owner.append(new_owner)
 
   def NumShips(self, new_num_ships=None):
     if new_num_ships == None:
-      return self._num_ships
-    self._num_ships = new_num_ships
+      return self._num_ships[0]
+    self._num_ships = []
+    self._num_ships.append(new_num_ships)
 
   def GrowthRate(self):
     return self._growth_rate
@@ -88,27 +183,72 @@ class PlanetWars:
     self.ParseGameState(gameState)
     self._distance = {}
     logging.info('initializing distance')
-    self.InitDistance()
+    self._max_distance = self.InitDistance()
+    logging.info('done with distances')
+    logging.info('initialiaing and calculatings neighbors')
+    self.InitNeighbors()
     logging.info('done with initialization')
-    
+    self.InitArrivals()
+
+
+  def InitNeighbors(self):
+    logging.debug('initializing arrays')
+    #create the arrays
+    for p in self._planets:
+      p.CreateNeighbor(self._max_distance)
+    logging.debug('done, populating arrays')
+    #populate the arrays
+    for p1 in self._planets:
+      for p2 in self._planets:
+        distance = self.Distance(p1.PlanetID(),p2.PlanetID())
+        if distance>0:
+          p1.AddNeighbor(distance, p2)
+    logging.debug('done')
+
+  def InitArrivals(self):
+    logging.debug('initializing arrays')
+    for p in self._planets:
+      p.InitArrivals(self._max_distance)
+    logging.debug('done')
+
   def Update(self, gameState, turn):
     logging.info('Updating map information for turn '+repr(turn))
+    logging.debug('updating old flight information')
+    for f in self._fleets:
+      in_flight = f.Update()
+      logging.debug(repr(in_flight) + ' turns left for this flight')
+      if not(in_flight):
+        self._fleets.remove(f)
+        logging.debug('removed flight ' + repr(f))
+      logging.debug('updated a flight!')
+    logging.debug('updated!')
+    logging.debug('updating the arrival queues')
+    for p in self._planets:
+      p.Update()
+    logging.debug('done')
     self.ParseGameState(gameState, 1)
     logging.info('there are ' + repr(len(self._planets)) + ' and ' + repr(len(self._fleets)) + ' fleets')
     logging.info('sucessfully updated!')
 
   def InitDistance(self):
+    max = 0
     for i in range(0,len(self._planets)): 
       p_id = self._planets[i].PlanetID()
       self._distance[p_id]={}
       for j in range(i+1,len(self._planets)):
         o_id = self._planets[j].PlanetID()
-        self._distance[p_id][o_id]=self.CalcDistance(p_id,o_id)
-    logging.debug('done')
+        distance = self.CalcDistance(p_id,o_id)
+        self._distance[p_id][o_id]=distance
+        if distance > max:
+          max = distance
+    logging.debug('done. max is '+repr(max))
+    return max
 
   def Distance(self, source, dest):
     if source < dest:
       return self._distance[source][dest]
+    elif source == dest:
+      return 0
     else:
       return self._distance[dest][source]
 
@@ -216,18 +356,6 @@ class PlanetWars:
       self._fleets = []
     lines = s.split("\n")
     planet_id = 0
-
-    if(update):
-      logging.debug('updating old flight information')
-      for f in self._fleets:
-        in_flight = f.Update()
-        logging.debug(repr(in_flight) + ' turns left for this flight')
-        if not(in_flight):
-          self._fleets.remove(f)
-          logging.debug('removed flight ' + repr(f))
-        logging.debug('updated a flight!')
-      logging.debug('updated!')
-
     for line in lines:
       line = line.split("#")[0] # remove comments
       tokens = line.split(" ")
@@ -243,6 +371,7 @@ class PlanetWars:
           logging.debug('pulled the planet')
           p.Owner(int(tokens[3]))
           p.NumShips(int(tokens[4]))
+          p.ResetFreeTroops()
           logging.debug('done')
         else:
           p = Planet(planet_id, # The ID of this planet
@@ -252,6 +381,7 @@ class PlanetWars:
                    float(tokens[1]), # X
                    float(tokens[2])) # Y
           self._planets.append(p)
+          p.ResetFreeTroops()
         planet_id += 1
 
       elif tokens[0] == "F":

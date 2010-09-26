@@ -22,7 +22,6 @@ def DoTurn(pw):
 
   # (2) Find my strongest planet.
   source = -1
-  source_score = -999999.0
   source_num_ships = 0
   my_planets = pw.MyPlanets()
   logging.debug('initializing turn')
@@ -39,7 +38,6 @@ def DoTurn(pw):
         logging.debug('changing scrore')
         score -= f.NumShips()
     logging.debug('done')
-    source_score = score
     source = p.PlanetID()
     source_num_ships = score
 

@@ -10,6 +10,7 @@ do
         RES=`java -jar tools/PlayGame.jar maps/map$i.txt 1000 1000 log.txt "java -jar $file" "python MyBot.py" 2>&1 | grep ^Player`
         if [ "$RES" = "Player 1 Wins!" ] ; then
             player_1_counter=`expr $player_1_counter + 1`
+	    echo "Lost on map: $i"
         else
             player_2_counter=`expr $player_2_counter + 1`
         fi
