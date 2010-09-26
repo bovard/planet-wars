@@ -25,24 +25,26 @@ def DoTurn(pw):
   source_score = -999999.0
   source_num_ships = 0
   my_planets = pw.MyPlanets()
-  logging.info('initializing')
+  logging.debug('initializing turn')
   for p in my_planets:
+    logging.debug('looking at a planet')
+    logging.debug('planet '+repr(p.PlanetID()))
     score = p.NumShips()
-    logging.info('checking enemy fleets')
+    logging.debug('checking enemy fleets')
     enemy_fleets = pw.EnemyFleets()
-    logging.info('grabbed enemy fleets')
+    logging.debug('grabbed enemy fleets')
     for f in enemy_fleets:
-      logging.info('enumerating...')
+      logging.debug('enumerating through enemy fleets...')
       if f.DestinationPlanet() == p.PlanetID():
-        logging.info('changing scrore')
+        logging.debug('changing scrore')
         score -= f.NumShips()
-    logging.info('done')
+    logging.debug('done')
     source_score = score
     source = p.PlanetID()
     source_num_ships = score
 
     # (3) Find the weakest enemy or neutral planet.
-    logging.info('choosing target')
+    logging.debug('choosing target')
     
     dest_score = 99999999.0
     dest = -1
@@ -80,10 +82,10 @@ def DoTurn(pw):
           dest_distance = distance
           dest_allies = allies
 
-    logging.info('done')
+    logging.debug('done')
   # (4) Send half the ships from my strongest planet to the weakest
   # planet that I do not own.
-    logging.info('sending fleets')
+    logging.debug('sending fleets')
     if source >= 0 and dest >= 0:
       to_send = 0
       if dest_owner == 2:
@@ -92,16 +94,24 @@ def DoTurn(pw):
         to_send = dest_num_ships + dest_enemies - dest_allies + 1
       if source_num_ships > to_send and to_send > 0:
         pw.IssueOrder(source, dest, to_send)
-    logging.info('done')
+    logging.info('done with turn')
 
 
 def main():
   map_data = ''
+  turn = -1
+  pw = -1
   while(True):
     current_line = raw_input()
     if len(current_line) >= 2 and current_line.startswith("go"):
-      pw = PlanetWars(map_data)
+      turn += 1
+      if turn == 0:
+        pw = PlanetWars(map_data, turn)
+      else:
+        pw.Update(map_data, turn)
+      logging.info('Starting Turn ' + repr(pw))
       DoTurn(pw)
+      logging.info('finished turn!')
       pw.FinishTurn()
       map_data = ''
     else:

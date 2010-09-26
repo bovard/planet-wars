@@ -18,6 +18,10 @@ class Fleet:
     self._total_trip_length = total_trip_length
     self._turns_remaining = turns_remaining
 
+  def Update(self):
+    self._turns_remaining -= 1
+    return self._turns_remaining
+
   def Owner(self):
     return self._owner
 
@@ -76,15 +80,22 @@ class Planet:
 
 
 class PlanetWars:
-  def __init__(self, gameState):
+  def __init__(self, gameState, turn):
     logging.info('Initializing Planet Wars')
+    logging.info('Turn number '+repr(turn))
     self._planets = []
     self._fleets = []
     self.ParseGameState(gameState)
     self._distance = {}
     logging.info('initializing distance')
     self.InitDistance()
-    logging.info('done')
+    logging.info('done with initialization')
+    
+  def Update(self, gameState, turn):
+    logging.info('Updating map information for turn '+repr(turn))
+    self.ParseGameState(gameState, 1)
+    logging.info('there are ' + repr(len(self._planets)) + ' and ' + repr(len(self._fleets)) + ' fleets')
+    logging.info('sucessfully updated!')
 
   def InitDistance(self):
     for i in range(0,len(self._planets)): 
@@ -93,7 +104,7 @@ class PlanetWars:
       for j in range(i+1,len(self._planets)):
         o_id = self._planets[j].PlanetID()
         self._distance[p_id][o_id]=self.CalcDistance(p_id,o_id)
-    logging.info('done')
+    logging.debug('done')
 
   def Distance(self, source, dest):
     if source < dest:
@@ -199,11 +210,23 @@ class PlanetWars:
         return True
     return False
 
-  def ParseGameState(self, s):
-    self._planets = []
-    self._fleets = []
+  def ParseGameState(self, s, update=0):
+    if not(update):
+      self._planets = []
+      self._fleets = []
     lines = s.split("\n")
     planet_id = 0
+
+    if(update):
+      logging.debug('updating old flight information')
+      for f in self._fleets:
+        in_flight = f.Update()
+        logging.debug(repr(in_flight) + ' turns left for this flight')
+        if not(in_flight):
+          self._fleets.remove(f)
+          logging.debug('removed flight ' + repr(f))
+        logging.debug('updated a flight!')
+      logging.debug('updated!')
 
     for line in lines:
       line = line.split("#")[0] # remove comments
@@ -211,26 +234,44 @@ class PlanetWars:
       if len(tokens) == 1:
         continue
       if tokens[0] == "P":
+        logging.debug('planet token')
         if len(tokens) != 6:
           return 0
-        p = Planet(planet_id, # The ID of this planet
+        if(update):
+          logging.debug('updating planet '+repr(planet_id))
+          p = self.GetPlanet(planet_id)
+          logging.debug('pulled the planet')
+          p.Owner(int(tokens[3]))
+          p.NumShips(int(tokens[4]))
+          logging.debug('done')
+        else:
+          p = Planet(planet_id, # The ID of this planet
                    int(tokens[3]), # Owner
                    int(tokens[4]), # Num ships
                    int(tokens[5]), # Growth rate
                    float(tokens[1]), # X
                    float(tokens[2])) # Y
+          self._planets.append(p)
         planet_id += 1
-        self._planets.append(p)
+
       elif tokens[0] == "F":
+        logging.debug('flight token')
         if len(tokens) != 7:
           return 0
-        f = Fleet(int(tokens[1]), # Owner
+        else:
+          logging.debug('testing to add a valid flight')
+          logging.debug('update='+repr(update))
+          logging.debug(repr(int(tokens[6])+1) + '=' + repr(tokens[5]))
+          if not(update) or int(tokens[6])+1==int(tokens[5]):
+            logging.debug('adding a flight')
+            f = Fleet(int(tokens[1]), # Owner
                   int(tokens[2]), # Num ships
                   int(tokens[3]), # Source
                   int(tokens[4]), # Destination
                   int(tokens[5]), # Total trip length
                   int(tokens[6])) # Turns remaining
-        self._fleets.append(f)
+            self._fleets.append(f)
+            logging.debug('done')
       else:
         return 0
     return 1
