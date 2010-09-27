@@ -6,7 +6,7 @@ from sys import stdout
 
 import logging
 LOG_FILENAME = 'War.log'
-logging.basicConfig(filename=LOG_FILENAME,level=logging.INFO, filemode='w')
+logging.basicConfig(filename=LOG_FILENAME,level=logging.CRITICAL, filemode='w')
 
 
 class Fleet:
@@ -19,7 +19,9 @@ class Fleet:
     self._turns_remaining = turns_remaining
 
   def Update(self):
+    logging.debug('in update')
     self._turns_remaining -= 1
+    logging.debug('done')
     return self._turns_remaining
 
   def Owner(self):
@@ -136,6 +138,8 @@ class Planet:
   # this needs to be called every turn sequentially to work, call at the begginning of the turn
   def CalcFreeTroops(self, turn):
     logging.debug('in CalcFreeTroops')
+    logging.debug('enemy_arrivals: '+repr(self._enemy_arrivals))
+    logging.debug('allied arrivals: '+repr(self._allied_arrivals))
     levels = [0, self._allied_arrivals[turn], self._enemy_arrivals[turn]]
     if not(self._owner[turn-1] == 0):
       levels[self._owner[turn-1]] += self._growth_rate
@@ -349,6 +353,7 @@ class PlanetWars:
     logging.debug('in AddNewFlights')
     for f in self._fleets:
       logging.debug('testing for new flights')
+      logging.debug(repr(f.TurnsRemaining()+1)+'=?'+repr(f.TotalTripLength()))
       if f.TurnsRemaining()+1==f.TotalTripLength():
         logging.debug('testing for owner')
         if f.Owner() ==1:
@@ -362,13 +367,17 @@ class PlanetWars:
   def Update(self, gameState, turn):
     logging.info('Updating map information for turn '+repr(turn))
     logging.debug('updating old flight information')
+    to_remove = []
     for f in self._fleets:
+      logging.debug('updating a flight')
       in_flight = f.Update()
       logging.debug(repr(in_flight) + ' turns left for this flight')
       if not(in_flight):
-        self._fleets.remove(f)
-        logging.debug('removed flight ' + repr(f))
+        to_remove.append(f)
       logging.debug('updated a flight!')
+    for f in to_remove:
+      self._fleets.remove(f)
+      logging.debug('removed flight ' + repr(f))
     logging.debug('updated!')
     logging.debug('updating the arrival queues')
     for p in self._planets:
@@ -513,6 +522,7 @@ class PlanetWars:
       self._fleets = []
     lines = s.split("\n")
     planet_id = 0
+    flights = 0
     for line in lines:
       line = line.split("#")[0] # remove comments
       tokens = line.split(" ")
@@ -543,12 +553,13 @@ class PlanetWars:
 
       elif tokens[0] == "F":
         logging.debug('flight token')
+        flights += 1
         if len(tokens) != 7:
           return 0
         else:
           logging.debug('testing to add a valid flight')
           logging.debug('update='+repr(update))
-          logging.debug(repr(int(tokens[6])+1) + '=' + repr(tokens[5]))
+          logging.debug(tokens[6] + '+1=?' + tokens[5])
           if not(update) or int(tokens[6])+1==int(tokens[5]):
             logging.debug('adding a flight')
             f = Fleet(int(tokens[1]), # Owner
@@ -561,6 +572,9 @@ class PlanetWars:
             logging.debug('done')
       else:
         return 0
+    if not(flights==len(self._fleets)):
+      logging.critical("FLIGHT MISMANAGEDMENT!")
+      logging.critical('processed: '+repr(flights)+' but only have '+repr(len(self._fleets)))
     return 1
 
   def FinishTurn(self):
