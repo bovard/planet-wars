@@ -76,82 +76,58 @@ def DoTurn(pw):
 
   logging.debug('i should be done')
 
-  #Look for a planet with free_troops still left on it
-  # (2) Find my strongest planet.
-  source = -1
-  source_num_ships = 0
-  my_planets = pw.MyPlanets()
-  logging.debug('initializing attack turn')
-  for p in my_planets:
-    logging.debug('looking at a planet')
-    logging.debug('planet '+repr(p.PlanetID()))
-    score = p.GetFreeTroops(0)
-    source = p.PlanetID()
-    source_num_ships = score
+  logging.debug('creating attack options queue')
+  attack_options = {}
+  for p in pw.Planets():
+    attack_options[p.PlanetID()]={}
+    for i in range(pw.MaxDistance()+1):
+      attack_options[p.PlanetID()][i]=0
+  logging.debug('done')
 
-    # (3) Find the weakest enemy or neutral planet.
-    logging.debug('choosing target')
+  deja_attacke=[]
+  logging.debug('looking for enemies to attack')
+  for i in range(1,pw.MaxDistance()):
+    logging.debug('turn '+repr(i))
+    for p in pw.EnemyPlanets(i):
+      if not(p.GetOwner(i-1)==0) and not(p.PlanetID() in deja_attacke):
+        if p.CanTakeOver(i):
+          p.CommitReinforce(i, p.GetFreeTroops(0,i)-1, launch_queue)
+          attack_options[p.PlanetID()][i]=p.GetFreeTroops(0,i)-1
+          logging.info('launched an attack!')
+          logging.info('sending '+repr(p.GetFreeTroops(0,i)-1)+' troops to '+repr(p.PlanetID()))
+          deja_attacke.append(p.PlanetID())
+        else:
+          logging.debug("counldn't attack!")
+  logging.debug('done')
 
-    dest_score = 99999999.0
-    dest = -1
-    dest_num_ships = 0
-    dest_owner = -1
-    dest_enemies = -1
-    dest_growth = -1
-    dest_distance = -1
-    dest_allies = -1
-    not_my_planets = pw.NotMyPlanets()
-    enemy_fleets = pw.EnemyFleets()
-    for p in not_my_planets:
-      if p.GrowthRate() > 0:
-        distance = pw.Distance(source, p.PlanetID())
-        enemies = 0
-        for f in enemy_fleets:
-          if f.DestinationPlanet() == p.PlanetID():
-            enemies = enemies + f.NumShips()
-        my_fleets = pw.MyFleets()
-        allies = 0
-        for f in my_fleets:
-          if f.DestinationPlanet() == p.PlanetID():
-            allies += f.NumShips()
-        if p.GetOwner() == 2:
-          score = distance + ((p.NumShips() + enemies + distance*p.GrowthRate())/(2*p.GrowthRate()))
-        if p.GetOwner() == 0:
-          score = distance + ((p.NumShips() + enemies)/p.GrowthRate())
-        if score < dest_score and enemies + p.NumShips() > allies:
-          dest_score = score
-          dest = p.PlanetID()
-          dest_num_ships = p.NumShips()
-          dest_owner = p.GetOwner()
-          dest_enemies = enemies
-          dest_growth = p.GrowthRate()
-          dest_distance = distance
-          dest_allies = allies
+  deja_attacke=[]
+  logging.debug('looking for neutrals to attack')
+  for i in range(1,pw.MaxDistance()):
+    logging.debug('turn '+repr(i))
+    for p in pw.NeutralPlanets(i):
+      if p.CanTakeOver(i) and not(p in deja_attacke):
+        logging.debug('this neutral planet has '+repr(p.GetNumShips(i))+' troops on it!')
+        p.CommitReinforce(i, p.GetFreeTroops(0,i)-1-p.GetNumShips(i), launch_queue)
+        logging.info('launched an attack!')
+        logging.info('sending '+repr(p.GetFreeTroops(0,i)-1)+' troops to '+repr(p.PlanetID()))
+        deja_attacke.append(p)
 
-    logging.debug('done')
-  # (4) Send half the ships from my strongest planet to the weakest
-  # planet that I do not own.
-    logging.debug('sending fleets')
-    if source >= 0 and dest >= 0:
-      to_send = 0
-      if dest_owner == 2:
-        to_send = int(dest_num_ships + dest_enemies - dest_allies + dest_distance*dest_growth) + 1
-      if dest_owner == 0:
-        to_send = dest_num_ships + dest_enemies - dest_allies + 1
-      if source_num_ships > to_send and to_send > 0:
-        launch_queue[source][dest] += to_send
-    logging.info('done with turn')
+  logging.debug('done')
 
   #launch troops!
-  for p in pw.Planets():
+  for p in pw.MyPlanets():
     to_send = 0
     for o in pw.Planets():
       to_send = launch_queue[p.PlanetID()][o.PlanetID()]
       if to_send>0:
         logging.info('Sending a fleet of ' + repr(to_send)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
-        logging.info('Planet'+repr(p.PlanetID())+'- regen: '+repr(p.GrowthRate()) + '- troops: '+repr(p.NumShips()))
-        logging.info('Planet'+repr(o.PlanetID())+'- regen: '+repr(o.GrowthRate()) + '- troops: '+repr(o.NumShips()))
+        logging.info('Planet'+repr(p.PlanetID())+'- regen: '+repr(p.GrowthRate()) + '- troops: '+repr(p.GetNumShips()))
+        logging.info('Planet'+repr(o.PlanetID())+'- regen: '+repr(o.GrowthRate()) + '- troops: '+repr(o.GetNumShips()))
+        logging.info('balls?')
         pw.IssueOrder(p.PlanetID(),o.PlanetID(),to_send)
+      elif to_send<0:
+        logging.critical('NEGATIVE AMOUNT TO SEND')
+        logging.critical('Sending a fleet of ' + repr(to_send)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
 
 
 def main():

@@ -172,10 +172,15 @@ class Planet:
         logging.debug('calced 0 free troops (neutral)')
     logging.debug('leaving, free troops: ' + repr(self._free_troops))
 
-  def GetFreeTroops(self, turn):
-    logging.debug('in GetFreeTroops' + repr(self._free_troops)+ ' turn='+repr(turn))
-    logging.debug(repr(self._free_troops[turn])+' '+repr(self._allied_reinforcements[turn]))
-    return self._free_troops[turn]
+  def GetFreeTroops(self, start_turn, end_turn=-1):
+    logging.debug('in GetFreeTroops' + repr(self._free_troops)+ ' turn='+repr(start_turn))
+    logging.debug(repr(self._free_troops[start_turn])+' '+repr(self._allied_reinforcements[start_turn]))
+    if end_turn == -1:
+      logging.debug('return a single turn of free troops')
+      return self._free_troops[start_turn]+self._allied_reinforcements[start_turn]
+    else:
+      logging.debug('returning a range of free troops ['+repr(start_turn)+','+repr(end_turn)+']')
+      return sum(self._free_troops[start_turn:end_turn+1])+sum(self._allied_reinforcements[start_turn:end_turn+1])
 
 
   def CommitFreeTroops(self, turn, ships):
@@ -216,10 +221,12 @@ class Planet:
   def GetOwner(self, turn=0):
     return self._owner[turn]
 
-  def NumShips(self, new_num_ships=None):
-    logging.debug('in NumShips with new_num_ships='+repr(new_num_ships))
-    if new_num_ships == None:
-      return self._num_ships[0]
+  def GetNumShips(self, turn=0):
+    logging.debug('in GetNumShips with turn='+repr(turn))
+    return self._num_ships[turn]
+
+  def SetNumShips(self, new_num_ships):
+    logging.debug('in SetNumShips with new_num_ships='+repr(new_num_ships))
     self._num_ships = []
     logging.debug('adding some new ships'+repr(new_num_ships))
     self._num_ships.append(new_num_ships)
@@ -242,56 +249,87 @@ class Planet:
   def CanReinforce(self, turn, ship_request):
     ships = ship_request
     logging.debug('in CanReinforce')
+
     #check oneself first
     logging.debug('looking for reinforcements from home planet')
-    for i in range(turn-1,-1,-1):
-      logging.debug('there are '+repr(ships)+' left!')
-      ships += self.GetFreeTroops(i)
-      logging.debug('only '+repr(ships)+' left!')
-      if ships >= 0:
-        logging.debug('one can reinfroce (leaving CanReinforce)')
-        return 1
-    #check allies for help
+    logging.debug('there are '+repr(ships)+' left!')
+    ships += self.GetFreeTroops(0,turn-1)
+    logging.debug('only '+repr(ships)+' left!')
+    if ships >= 0:
+      logging.debug('one can reinfroce (leaving CanReinforce)')
+      return 1
+    #check levels on nearby planets for help
     logging.debug('looking for reinforcements from allied planets')
     for i in range(1,turn+1):
       logging.debug('looking '+repr(i)+' units away')
       for p in self._neighbors[i]:
-        for j in range(turn,i-1,-1):
-          k = turn-j
-          ships += p.GetFreeTroops(k)
-          if ships >= 0:
-            logging.debug('one can reinfroce (leaving CanReinforce)')
-            return 1
+        ships += p.GetFreeTroops(0,turn-i)
+        if ships >= 0:
+          logging.debug('one can reinfroce (leaving CanReinforce)')
+          return 1
     logging.debug('one cannot reinforce! (leaving CanReinforce)')
     return 0
+
+  def CanTakeOver(self, turn):
+    ships = -1
+    logging.debug('in CanTakeOver')
+
+    if self._owner[turn]==0:
+      ships -= self._num_ships[turn]
+
+    #check oneself first
+    logging.debug('looking for reinforcements from home planet')
+    logging.debug('there are '+repr(ships)+' left!')
+    ships += self.GetFreeTroops(0,turn)
+    logging.debug('only '+repr(ships)+' left!')
+    if ships >= 0:
+      logging.debug('one can takeover (leaving CanTakeOver)')
+      return 1
+
+    #check levels on nearby planets for help
+    logging.debug('looking for reinforcements from nearby planets')
+    for i in range(1,turn+1):
+      logging.debug('looking '+repr(i)+' units away')
+      for p in self._neighbors[i]:
+        ships += p.GetFreeTroops(0,turn-i)
+        logging.debug('only '+repr(ships)+' left!')
+        if ships >= 0:
+          logging.debug('one can TAKEOVER (leaving CanTakeOver)')
+          return 1
+    logging.debug('one cannot take over! (leaving CanTakeOver)')
+    return 0
+
 
   def CommitReinforce(self, turn, ship_request, launch_queue):
     ships = ship_request
     logging.debug('in CommitReinforce')
     #check oneself first
-    logging.debug('looking for reinforcements from home planet')
-    for i in range(turn-1,-1,-1):
-      ships += self.CommitFreeTroops(i, ships)
-      if ships >= 0:
-        self._free_troops[turn]=ships
-        logging.debug('sucess! leaving commitreinforce')
-        logging.debug('free troops are: '+repr(self._free_troops))
-        return 1
+    if self._owner[turn-1]==1:
+      logging.debug('looking for reinforcements from home planet')
+      for i in range(turn-1,-1,-1):
+        ships += self.CommitFreeTroops(i, ships)
+        if ships >= 0:
+          self._free_troops[turn]=ships
+          logging.debug('sucess! leaving commitreinforce')
+          logging.debug('free troops are: '+repr(self._free_troops))
+          return 1
     #check allies for help
     for i in range(1,turn+1):
       for p in self._neighbors[i]:
         for j in range(turn,i-1,-1):
           k = turn-j
           reinforcement = p.CommitFreeTroops(k, ships)
-          ships += reinforcement
-          if i==turn and k==0:
-            logging.info('sending '+repr(reinforcement)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(i))
-            launch_queue[p.PlanetID()][self._planet_id]+=reinforcement
-          if ships >= 0:
-            logging.debug('sucess! leaving commitreinforce')
-            self._free_troops[turn]=ships
-            logging.debug(repr(self._free_troops))
-            return 1
+          if reinforcement > 0:
+            logging.info('have some reinforcements to send! dist='+repr(i)+' turn='+repr(turn)+' k='+repr(k))
+            ships += reinforcement
+            if i==turn and k==0:
+              logging.info('sending '+repr(reinforcement)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(i))
+              launch_queue[p.PlanetID()][self._planet_id]+=reinforcement
+            if ships >= 0:
+              logging.debug('sucess! leaving commitreinforce')
+              self._free_troops[turn]=ships
+              logging.debug(repr(self._free_troops))
+              return 1
     self._free_troops[turn]=ships
     logging.debug('failed! CommitReinforce')
     return 0
@@ -486,7 +524,7 @@ class PlanetWars:
     s = ''
     for p in self._planets:
       s += "P %f %f %d %d %d\n" % \
-       (p.X(), p.Y(), p.GetOwner(), p.NumShips(), p.GrowthRate())
+       (p.X(), p.Y(), p.GetOwner(), p.GetNumShips(), p.GrowthRate())
     for f in self._fleets:
       s += "F %d %d %d %d %d %d\n" % \
        (f.Owner(), f.NumShips(), f.SourcePlanet(), f.DestinationPlanet(), \
@@ -537,7 +575,7 @@ class PlanetWars:
           p = self.GetPlanet(planet_id)
           logging.debug('pulled the planet')
           p.SetOwner(int(tokens[3]))
-          p.NumShips(int(tokens[4]))
+          p.SetNumShips(int(tokens[4]))
           p.ResetFreeTroops()
           logging.debug('done')
         else:

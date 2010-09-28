@@ -1,5 +1,5 @@
 #!/bin/bash
-for file in example_bots/*.jar
+for file in example_bots/RageBot.jar
 do
     player_1_counter=0
     player_2_counter=0
