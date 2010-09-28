@@ -27,8 +27,11 @@ def DoTurn(pw):
       launch_queue[p.PlanetID()][o.PlanetID()]=0
   logging.debug('initialezed launch queue!')
 
+
+  
   logging.debug('starting the turn loop cycle ('+repr(pw.MaxDistance())+' turns)')
   for i in range(pw.MaxDistance()):
+    pw.CalcNeighbors(i)
     logging.debug('turn loop '+repr(i))
     #calculate free troops
     logging.debug('calculating free troops')
@@ -84,6 +87,8 @@ def DoTurn(pw):
       attack_options[p.PlanetID()][i]=0
   logging.debug('done')
 
+
+
   deja_attacke=[]
   logging.debug('looking for enemies to attack')
   for i in range(1,pw.MaxDistance()):
@@ -100,17 +105,32 @@ def DoTurn(pw):
           logging.debug("counldn't attack!")
   logging.debug('done')
 
+#  logging.debug('holding back reinforcements')
+#  for p in pw.MyPlanets():
+#    i = p.CanDefend(pw.MaxDistance())
+#    free = p.GetFreeTroops(0)
+#    if i>0:
+#      p.CommitFreeTroops(0, free-i)
+#    elif i<0:
+#      p.CommitFreeTroops(0, free)
+
   deja_attacke=[]
   logging.debug('looking for neutrals to attack')
   for i in range(1,pw.MaxDistance()):
     logging.debug('turn '+repr(i))
     for p in pw.NeutralPlanets(i):
-      if p.CanTakeOver(i) and not(p in deja_attacke):
-        logging.debug('this neutral planet has '+repr(p.GetNumShips(i))+' troops on it!')
-        p.CommitReinforce(i, p.GetFreeTroops(0,i)-1-p.GetNumShips(i), launch_queue)
-        logging.info('launched an attack!')
-        logging.info('sending '+repr(p.GetFreeTroops(0,i)-1)+' troops to '+repr(p.PlanetID()))
-        deja_attacke.append(p)
+      logging.debug('Looking at neutral planet with id='+repr(p.PlanetID()))
+      if not(p in deja_attacke) and p.NearestAlly(i) < p.NearestEnemy(i) and not(p.GrowthRate()==0):
+        logging.debug('first condition met')
+        if (p.GetNumShips(i)/p.GrowthRate()+p.NearestAlly(i)) < p.NearestEnemy(i):
+          logging.debug('second condition met')
+          if p.CanTakeOver(i):
+            logging.debug('third condition met! attack!')
+            logging.debug('this neutral planet has '+repr(p.GetNumShips(i))+' troops on it!')
+            p.CommitReinforce(i, p.GetFreeTroops(0,i)-1-p.GetNumShips(i), launch_queue)
+            logging.info('launched an attack!')
+            logging.info('sending '+repr(p.GetFreeTroops(0,i)-1)+' troops to '+repr(p.PlanetID()))
+            deja_attacke.append(p)
 
   logging.debug('done')
 

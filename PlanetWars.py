@@ -61,6 +61,15 @@ class Planet:
     self._enemy_arrivals = []
     self._free_troops = []
     self._allied_reinforcements=[]
+    self._nearest_ally = []
+    self._nearest_enemy = []
+    self._farthest_enemy = []
+    self._farthest_ally = []
+    self._nearest_ally.append(100000000000)
+    self._nearest_enemy.append(100000000000)
+    self._farthest_enemy.append(0)
+    self._farthest_ally.append(0)
+
 
   # needs to be called once at the beginning of the game (done)
   def InitArrivals(self, max):
@@ -89,6 +98,31 @@ class Planet:
     for i in range(max+1):
       self._allied_reinforcements.append(0)
 
+  def ResetNeighbors(self):
+    self._nearest_ally = []
+    self._nearest_enemy = []
+    self._farthest_enemy = []
+    self._farthest_ally = []
+
+  def NearestAlly(self, turn=0):
+    logging.debug('returning nearest ally for turn '+repr(turn))
+    logging.debug(repr(self._nearest_ally[turn]))
+    return self._nearest_ally[turn]
+
+  def NearestEnemy(self, turn=0):
+    logging.debug('returning nearest enemy for turn '+repr(turn))
+    logging.debug(repr(self._nearest_enemy[turn]))
+    return self._nearest_enemy[turn]
+
+  def FarthestEnemy(self, turn=0):
+    logging.debug('returning farthest enemy for turn '+repr(turn))
+    logging.debug(repr(self._farthest_enemy[turn]))
+    return self._farthest_enemy[turn]
+
+  def FarthestAlly(self, turn=0):
+    logging.debug('returning farthest ally for turn '+repr(turn))
+    logging.debug(repr(self._farthest_ally[turn]))
+    return self._farthest_ally[turn]
 
   # this should be called after troop levels are set (even when creating a planet!)(done)
   def ResetFreeTroops(self):
@@ -106,6 +140,28 @@ class Planet:
     logging.debug('entering Reinforce')
     self._allied_reinforcements[turn]+=ships
     logging.debug('leaving reinforce')
+
+  #called after CalCOwnerAndNumShips
+  def CalcNeighbors(self, turn, max):
+    near_enemy =999999999999
+    near_ally =99999999999
+    far_enemy =0
+    far_ally =0
+    for i in range(1,max+1):
+      for p in self._neighbors[i]:
+        if p.GetOwner(turn)==2:
+          if i < near_enemy: near_enemy=i
+          if i > far_enemy: far_enemy=i
+        elif p.GetOwner(turn)==1:
+          if i < near_ally: near_ally=i
+          if i > far_ally: far_ally=i
+    logging.debug('calculated nearest: '+repr(near_ally)+','+repr(far_ally))
+    logging.debug('and farthest '+repr(far_ally)+','+repr(far_enemy)+' for turn '+repr(turn))
+    self._nearest_ally.append(near_ally)
+    self._nearest_enemy.append(near_enemy)
+    self._farthest_ally.append(far_ally)
+    self._farthest_enemy.append(far_enemy)
+
 
   # this needs to be called every turn sequentailly to work
   def CalcOwnerAndNumShips(self, turn):
@@ -172,6 +228,20 @@ class Planet:
         logging.debug('calced 0 free troops (neutral)')
     logging.debug('leaving, free troops: ' + repr(self._free_troops))
 
+  def CanDefend(self, max):
+    min = -99999999999999999
+    for i in range(max):
+      sum = self.GetFreeTroops(0, i)
+      for j in range(1,i+1):
+        for p in self._neighbors[j]:
+          sum += p.GetFreeTroops(0, i-j)
+      if sum<min:
+        min = sum
+    return min
+
+
+
+
   def GetFreeTroops(self, start_turn, end_turn=-1):
     logging.debug('in GetFreeTroops' + repr(self._free_troops)+ ' turn='+repr(start_turn))
     logging.debug(repr(self._free_troops[start_turn])+' '+repr(self._allied_reinforcements[start_turn]))
@@ -223,6 +293,7 @@ class Planet:
 
   def GetNumShips(self, turn=0):
     logging.debug('in GetNumShips with turn='+repr(turn))
+    logging.debug('self._num_ships is '+repr(self._num_ships) + 'turn = '+repr(turn))
     return self._num_ships[turn]
 
   def SetNumShips(self, new_num_ships):
@@ -357,11 +428,22 @@ class PlanetWars:
     logging.info('setting reinforcements')
     self.ResetReinforcements()
     logging.info('done setting reinforcements')
+    logging.info('setting nearest/farthest neighbors')
+    self.ResetNeighbors()
+    logging.info('done setting neighbors')
     logging.info('done with initialization')
 
   def ResetReinforcements(self):
     for p in self._planets:
       p.ResetReinforcements(self._max_distance)
+
+  def ResetNeighbors(self):
+    for p in self._planets:
+      p.ResetNeighbors()
+
+  def CalcNeighbors(self, turn):
+    for p in self._planets:
+      p.CalcNeighbors(turn, self._max_distance)
 
   def MaxDistance(self):
     return self._max_distance
@@ -429,6 +511,9 @@ class PlanetWars:
     logging.info('setting reinforcements')
     self.ResetReinforcements()
     logging.info('done setting reinforcements')
+    logging.info('resetting nearest/farthest neighbors')
+    self.ResetNeighbors()
+    logging.info('done resetting neighbors')
     logging.info('sucessfully updated!')
 
 
