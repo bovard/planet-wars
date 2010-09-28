@@ -101,6 +101,12 @@ def DoTurn(pw):
           logging.info('launched an attack!')
           logging.info('sending '+repr(p.GetFreeTroops(0,i)-1)+' troops to '+repr(p.PlanetID()))
           deja_attacke.append(p.PlanetID())
+          for j in range(i+1,pw.MaxDistance()):
+            troops = p.GetEnemyArrival(j)+p.GetAlliedArrival(j)
+            if troops < 0:
+              if p.CanReinforce(j, troops):
+                p.CommitReinforce(i, troops, launch_queue)
+
         else:
           logging.debug("counldn't attack!")
   logging.debug('done')

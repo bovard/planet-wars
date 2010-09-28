@@ -49,10 +49,8 @@ class Planet:
     self._planet_id = planet_id
     self._owner = []
     self._owner.append(owner)
-    logging.debug('owner is now '+repr(self._owner))
     self._num_ships = []
     self._num_ships.append(num_ships)
-    logging.debug('num ships is now '+repr(self._num_ships))
     self._growth_rate = growth_rate
     self._x = x
     self._y = y
@@ -69,6 +67,7 @@ class Planet:
     self._nearest_enemy.append(100000000000)
     self._farthest_enemy.append(0)
     self._farthest_ally.append(0)
+    logging.debug('done')
 
 
   # needs to be called once at the beginning of the game (done)
@@ -83,14 +82,18 @@ class Planet:
   def AddAlliedArrival(self, turn, ships):
     self._allied_arrivals[turn] += ships
 
+  def GetEnemyArrival(self, turn):
+    return self._enemy_arrivals[turn]
+
+  def GetAlliedArrival(self, turn):
+    return self._allied_arrivals[turn]
+
   # this should be called before flights are processed (done)
   def Update(self):
-    logging.debug('in Planet.Update() for planet ' + repr(self._planet_id))
     self._enemy_arrivals = self._enemy_arrivals[1:]
     self._enemy_arrivals.append(0)
     self._allied_arrivals = self._allied_arrivals[1:]
     self._allied_arrivals.append(0)
-    logging.debug('done')
 
   # this should be called before every turn starts
   def ResetReinforcements(self, max):
@@ -105,23 +108,15 @@ class Planet:
     self._farthest_ally = []
 
   def NearestAlly(self, turn=0):
-    logging.debug('returning nearest ally for turn '+repr(turn))
-    logging.debug(repr(self._nearest_ally[turn]))
     return self._nearest_ally[turn]
 
   def NearestEnemy(self, turn=0):
-    logging.debug('returning nearest enemy for turn '+repr(turn))
-    logging.debug(repr(self._nearest_enemy[turn]))
     return self._nearest_enemy[turn]
 
   def FarthestEnemy(self, turn=0):
-    logging.debug('returning farthest enemy for turn '+repr(turn))
-    logging.debug(repr(self._farthest_enemy[turn]))
     return self._farthest_enemy[turn]
 
   def FarthestAlly(self, turn=0):
-    logging.debug('returning farthest ally for turn '+repr(turn))
-    logging.debug(repr(self._farthest_ally[turn]))
     return self._farthest_ally[turn]
 
   # this should be called after troop levels are set (even when creating a planet!)(done)
@@ -134,7 +129,7 @@ class Planet:
       self._free_troops.append(-1*self._num_ships[0])
     else:
       self._free_troops.append(0)
-    logging.debug('free troops are: ' + repr(self._free_troops))
+    logging.debug('done')
 
   def Reinforce(self, turn, ships):
     logging.debug('entering Reinforce')
@@ -143,6 +138,7 @@ class Planet:
 
   #called after CalCOwnerAndNumShips
   def CalcNeighbors(self, turn, max):
+    logging.debug('Enterning CalcNeighbors')
     near_enemy =999999999999
     near_ally =99999999999
     far_enemy =0
@@ -155,12 +151,11 @@ class Planet:
         elif p.GetOwner(turn)==1:
           if i < near_ally: near_ally=i
           if i > far_ally: far_ally=i
-    logging.debug('calculated nearest: '+repr(near_ally)+','+repr(far_ally))
-    logging.debug('and farthest '+repr(far_ally)+','+repr(far_enemy)+' for turn '+repr(turn))
     self._nearest_ally.append(near_ally)
     self._nearest_enemy.append(near_enemy)
     self._farthest_ally.append(far_ally)
     self._farthest_enemy.append(far_enemy)
+    logging.debug('done')
 
 
   # this needs to be called every turn sequentailly to work
@@ -188,14 +183,11 @@ class Planet:
         if i>max2:
           max2=i
       self._num_ships.append(max-max2)
-    logging.debug('Ownership - '+repr(self._owner))
 
 
   # this needs to be called every turn sequentially to work, call at the begginning of the turn
   def CalcFreeTroops(self, turn):
     logging.debug('in CalcFreeTroops')
-    logging.debug('enemy_arrivals: '+repr(self._enemy_arrivals))
-    logging.debug('allied arrivals: '+repr(self._allied_arrivals))
     levels = [0, self._allied_arrivals[turn], self._enemy_arrivals[turn]]
     if not(self._owner[turn-1] == 0):
       levels[self._owner[turn-1]] += self._growth_rate
@@ -216,11 +208,9 @@ class Planet:
         if i>max2:
           max2=i
       if winner==1:
-        logging.debug('I won!'+repr(max)+ ' '+repr(max2))
         self._free_troops.append(max-max2)
         logging.debug('calced + free troops')
       elif winner==2:
-        logging.debug('I lost!'+repr(max)+ ' '+repr(max2))
         self._free_troops.append(max2-max)
         logging.debug('calced - free troops')
       else:
@@ -229,6 +219,7 @@ class Planet:
     logging.debug('leaving, free troops: ' + repr(self._free_troops))
 
   def CanDefend(self, max):
+    logging.debug('in CanDefend')
     min = -99999999999999999
     for i in range(max):
       sum = self.GetFreeTroops(0, i)
@@ -237,6 +228,7 @@ class Planet:
           sum += p.GetFreeTroops(0, i-j)
       if sum<min:
         min = sum
+    logging.debug('done')
     return min
 
 
@@ -244,9 +236,7 @@ class Planet:
 
   def GetFreeTroops(self, start_turn, end_turn=-1):
     logging.debug('in GetFreeTroops' + repr(self._free_troops)+ ' turn='+repr(start_turn))
-    logging.debug(repr(self._free_troops[start_turn])+' '+repr(self._allied_reinforcements[start_turn]))
     if end_turn == -1:
-      logging.debug('return a single turn of free troops')
       return self._free_troops[start_turn]+self._allied_reinforcements[start_turn]
     else:
       logging.debug('returning a range of free troops ['+repr(start_turn)+','+repr(end_turn)+']')
@@ -259,8 +249,9 @@ class Planet:
       left = ships + self._free_troops[turn]
       if left * ships > 0:
         ships_committed = self._free_troops[turn]
-        self._free_troops[turn] -= ships_committed
-        logging.debug('committed '+repr(ships_committed))
+        if ships_committed > 0:
+          self._free_troops[turn] -= ships_committed
+          logging.debug('committed '+repr(ships_committed))
         return ships_committed
       else:
         self._free_troops[turn] += ships
@@ -293,7 +284,6 @@ class Planet:
 
   def GetNumShips(self, turn=0):
     logging.debug('in GetNumShips with turn='+repr(turn))
-    logging.debug('self._num_ships is '+repr(self._num_ships) + 'turn = '+repr(turn))
     return self._num_ships[turn]
 
   def SetNumShips(self, new_num_ships):
@@ -374,11 +364,13 @@ class Planet:
   def CommitReinforce(self, turn, ship_request, launch_queue):
     ships = ship_request
     logging.debug('in CommitReinforce')
+    logging.debug('there are '+repr(ships)+' left!')
     #check oneself first
     if self._owner[turn-1]==1:
       logging.debug('looking for reinforcements from home planet')
       for i in range(turn-1,-1,-1):
         ships += self.CommitFreeTroops(i, ships)
+        logging.debug('there are '+repr(ships)+' left!')
         if ships >= 0:
           self._free_troops[turn]=ships
           logging.debug('sucess! leaving commitreinforce')
@@ -390,17 +382,16 @@ class Planet:
         for j in range(turn,i-1,-1):
           k = turn-j
           reinforcement = p.CommitFreeTroops(k, ships)
-          if reinforcement > 0:
-            logging.info('have some reinforcements to send! dist='+repr(i)+' turn='+repr(turn)+' k='+repr(k))
-            ships += reinforcement
-            if i==turn and k==0:
-              logging.info('sending '+repr(reinforcement)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(i))
-              launch_queue[p.PlanetID()][self._planet_id]+=reinforcement
-            if ships >= 0:
-              logging.debug('sucess! leaving commitreinforce')
-              self._free_troops[turn]=ships
-              logging.debug(repr(self._free_troops))
-              return 1
+          ships += reinforcement
+          logging.debug('there are '+repr(ships)+' left!')
+          if i==turn and k==0 and reinforcement>0:
+            logging.info('sending '+repr(reinforcement)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(i))
+            launch_queue[p.PlanetID()][self._planet_id]+=reinforcement
+          if ships >= 0:
+            logging.debug('sucess! leaving commitreinforce')
+            self._free_troops[turn]=ships
+            logging.debug(repr(self._free_troops))
+            return 1
     self._free_troops[turn]=ships
     logging.debug('failed! CommitReinforce')
     return 0
