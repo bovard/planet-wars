@@ -6,7 +6,7 @@ from sys import stdout
 
 import logging
 LOG_FILENAME = 'War.log'
-logging.basicConfig(filename=LOG_FILENAME,level=logging.CRITICAL, filemode='w')
+logging.basicConfig(filename=LOG_FILENAME,level=logging.INFO, filemode='w')
 
 
 class Fleet:
@@ -234,7 +234,7 @@ class Planet:
 
 
 
-  def GetFreeTroops(self, start_turn, end_turn=-1):
+  def GetFreeTroops(self, start_turn=0, end_turn=-1):
     logging.debug('in GetFreeTroops' + repr(self._free_troops)+ ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._free_troops[start_turn]+self._allied_reinforcements[start_turn]

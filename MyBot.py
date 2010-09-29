@@ -128,7 +128,7 @@ def DoTurn(pw):
       logging.debug('Looking at neutral planet with id='+repr(p.PlanetID()))
       if not(p in deja_attacke) and p.NearestAlly(i) < p.NearestEnemy(i) and not(p.GrowthRate()==0):
         logging.debug('first condition met')
-        if (p.GetNumShips(i)/p.GrowthRate()+p.NearestAlly(i)) < p.NearestEnemy(i):
+        if (p.GetNumShips(i)/p.GrowthRate()+p.NearestAlly(i)) < p.NearestEnemy(i) and p.NearestEnemy(i)<=pw.MaxDistance():
           logging.debug('second condition met')
           if p.CanTakeOver(i):
             logging.debug('third condition met! attack!')
@@ -139,6 +139,26 @@ def DoTurn(pw):
             deja_attacke.append(p)
 
   logging.debug('done')
+
+  logging.info('entering reinforcement phase')
+  for p in pw.MyPlanets():
+    logging.info('STARTING A PLANET ============='+repr(p.PlanetID()))
+    if p.GetFreeTroops()>0:
+      near_enemy = p.NearestEnemy()
+      if near_enemy <= pw.MaxDistance():
+        start_dist = int(near_enemy/2)+1
+        logging.info("start_dist="+repr(start_dist))
+        for i in range(start_dist,0,-1):
+          logging.info('here, i='+repr(i))
+          for o in o.GetNeighbors(i):
+            logging.info('here2')
+            if o.GetOwner(i)==1:
+              logging.info('here3')
+              if o.NearestEnemy(i)<=p.NearestEnemy(i) and not(p.PlanetID()==o.PlanetID()):
+                logging.info('here4')
+                launch_queue[p.PlanetID()][o.PlanetID()]+=p.GetFreeTroops()
+                p.CommitFreeTroops(0,p.GetFreeTroops())
+                logging.info('here5')
 
   #launch troops!
   for p in pw.MyPlanets():
