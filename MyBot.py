@@ -18,7 +18,7 @@ import logging
 
 from PlanetWars import PlanetWars
 
-def DoTurn(pw):
+def InitializeLaunchQueue(pw):
   logging.debug('initializing launch queue')
   launch_queue = {}
   for p in pw.Planets():
@@ -26,9 +26,10 @@ def DoTurn(pw):
     for o in pw.Planets():
       launch_queue[p.PlanetID()][o.PlanetID()]=0
   logging.debug('initialezed launch queue!')
+  return launch_queue
 
 
-  
+def MainLoop(pw, launch_queue):
   logging.debug('starting the turn loop cycle ('+repr(pw.MaxDistance())+' turns)')
   for i in range(pw.MaxDistance()):
     pw.CalcNeighbors(i)
@@ -47,7 +48,7 @@ def DoTurn(pw):
       if free < 0:
         logging.info('Planet'+repr(p.PlanetID())+' made a request for '+repr(free)+' on turn '+repr(i+1))
         attack_reinforcements.append([p.PlanetID(),i+1,free])
-  
+
     #respond to requests
     logging.debug('Responding to Attack Reinforcement Requests')
     if len(attack_reinforcements)>0:
@@ -79,6 +80,22 @@ def DoTurn(pw):
 
   logging.debug('i should be done')
 
+def HoldNecessary(pw):
+  logging.debug('holding back reinforcements')
+  for p in pw.MyPlanets():
+    if p.NearestEnemy(0)<=pw.MaxDistance():
+      extra = p.CanDefend(p.NearestEnemy(0))
+      free = p.GetFreeTroops(0)
+      logging.info('planet '+repr(p.PlanetID())+' with extra='+repr(extra)+' and free='+repr(free))
+      if extra>0 and free>extra:
+        logging.info('CanDefend committing a few troops')
+        i =p.CommitFreeTroops(0, extra-free)
+        logging.info('committed '+repr(i)+' troops')
+      elif free>0 and not(free==extra):
+        logging.info('CanDefend committing all the troops')
+        p.CommitFreeTroops(0, -free)
+
+def AttackEnemies(pw, launch_queue):
   logging.debug('creating attack options queue')
   attack_options = {}
   for p in pw.Planets():
@@ -86,8 +103,6 @@ def DoTurn(pw):
     for i in range(pw.MaxDistance()+1):
       attack_options[p.PlanetID()][i]=0
   logging.debug('done')
-
-
 
   deja_attacke=[]
   logging.debug('looking for enemies to attack')
@@ -111,55 +126,60 @@ def DoTurn(pw):
           logging.debug("counldn't attack!")
   logging.debug('done')
 
-#  logging.debug('holding back reinforcements')
-#  for p in pw.MyPlanets():
-#    i = p.CanDefend(pw.MaxDistance())
-#    free = p.GetFreeTroops(0)
-#    if i>0:
-#      p.CommitFreeTroops(0, free-i)
-#    elif i<0:
-#      p.CommitFreeTroops(0, free)
+def AttackNeutrals(pw, launch_queue):
 
   deja_attacke=[]
   logging.debug('looking for neutrals to attack')
-  for i in range(1,pw.MaxDistance()):
-    logging.debug('turn '+repr(i))
-    for p in pw.NeutralPlanets(i):
-      logging.debug('Looking at neutral planet with id='+repr(p.PlanetID()))
-      if not(p in deja_attacke) and p.NearestAlly(i) < p.NearestEnemy(i) and not(p.GrowthRate()==0):
-        logging.debug('first condition met')
-        if (p.GetNumShips(i)/p.GrowthRate()+p.NearestAlly(i)) < p.NearestEnemy(i) and p.NearestEnemy(i)<=pw.MaxDistance():
-          logging.debug('second condition met')
-          if p.CanTakeOver(i):
-            logging.debug('third condition met! attack!')
-            logging.debug('this neutral planet has '+repr(p.GetNumShips(i))+' troops on it!')
-            p.CommitReinforce(i, p.GetFreeTroops(0,i)-1-p.GetNumShips(i), launch_queue)
-            logging.info('launched an attack!')
-            logging.info('sending '+repr(p.GetFreeTroops(0,i)-1)+' troops to '+repr(p.PlanetID()))
-            deja_attacke.append(p)
+  for j in range(11):
+    for i in range(1,pw.MaxDistance()):
+      if pw.GetRegenBalance(i) < 30:
+        if pw.Planets()[0].NearestEnemy(i)<=pw.MaxDistance():
+          for p in pw.NeutralPlanets(i):
+            if p.GrowthRate()>0:
+              calc = p.GrowthRate()/p.GetNumShips()
+              if calc < j and calc >= j-1:
+                logging.debug('Looking at neutral planet with id='+repr(p.PlanetID()))
+                if not(p in deja_attacke) and p.NearestAlly(i) <= p.NearestEnemy(i):
+                  logging.debug('first condition met')
+                  #if (p.GetNumShips(i)/p.GrowthRate()+p.NearestAlly(i)) < p.NearestEnemy(i):
+                  #  logging.debug('second condition met')
+                  if p.CanTakeOver(i):
+                    logging.debug('third condition met! attack!')
+                    logging.debug('this neutral planet has '+repr(p.GetNumShips(i))+' troops on it!')
+                    p.CommitReinforce(i, p.GetFreeTroops(0,i)-1-p.GetNumShips(i), launch_queue)
+                    logging.info('launched an attack!')
+                    logging.info('sending '+repr(p.GetFreeTroops(0,i)-1)+' troops to '+repr(p.PlanetID()))
+                    deja_attacke.append(p)
+                    for k in range(i,pw.MaxDistance()):
+                      troops = p.GetEnemyArrival(k)+p.GetAlliedArrival(k)
+                      if troops < 0:
+                        if p.CanReinforce(k, troops):
+                          p.CommitReinforce(k, troops, launch_queue)
 
   logging.debug('done')
 
+def Reinfroce(pw, launch_queue):
   logging.info('entering reinforcement phase')
   for p in pw.MyPlanets():
-    logging.info('STARTING A PLANET ============='+repr(p.PlanetID()))
+    logging.debug('starting to reinforce planet'+repr(p.PlanetID()))
     if p.GetFreeTroops()>0:
       near_enemy = p.NearestEnemy()
       if near_enemy <= pw.MaxDistance():
         start_dist = int(near_enemy/2)+1
-        logging.info("start_dist="+repr(start_dist))
+        logging.debug("start_dist="+repr(start_dist))
         for i in range(start_dist,0,-1):
-          logging.info('here, i='+repr(i))
-          for o in o.GetNeighbors(i):
-            logging.info('here2')
+          logging.debug('here, i='+repr(i))
+          for o in p.GetNeighbors(i):
+            logging.debug('here2')
             if o.GetOwner(i)==1:
-              logging.info('here3')
+              logging.debug('here3')
               if o.NearestEnemy(i)<=p.NearestEnemy(i) and not(p.PlanetID()==o.PlanetID()):
-                logging.info('here4')
+                logging.debug('here4')
                 launch_queue[p.PlanetID()][o.PlanetID()]+=p.GetFreeTroops()
                 p.CommitFreeTroops(0,p.GetFreeTroops())
-                logging.info('here5')
+                logging.debug('here5')
 
+def LaunchShips(pw, launch_queue):
   #launch troops!
   for p in pw.MyPlanets():
     to_send = 0
@@ -174,6 +194,29 @@ def DoTurn(pw):
       elif to_send<0:
         logging.critical('NEGATIVE AMOUNT TO SEND')
         logging.critical('Sending a fleet of ' + repr(to_send)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
+
+def DoTurn(pw):
+  logging.info('-------------------Initializing the Launch Queue------------------------')
+  launch_queue=InitializeLaunchQueue(pw)
+  logging.info('-------------------Finished Initilizing the Launch Queue----------------')
+  logging.info('-------------------Starting the Main Loop-------------------------------')
+  MainLoop(pw, launch_queue)
+  logging.info('-------------------Finished the Main Loop-------------------------------')
+  logging.info('-------------------Starting Hold Orders on Necessary Troops-------------')
+  HoldNecessary(pw)
+  logging.info('-------------------Finished Hold Orders---------------------------------')
+  logging.info('-------------------Attacking Enemies------------------------------------')
+  AttackEnemies(pw, launch_queue)
+  logging.info('-------------------Finished Attacking Enemies---------------------------')
+  logging.info('-------------------Attacking Neutrals-----------------------------------')
+  AttackNeutrals(pw, launch_queue)
+  logging.info('-------------------Finished Attacking Neutrals--------------------------')
+  logging.info('-------------------Reinforcing------------------------------------------')
+  Reinfroce(pw, launch_queue)
+  logging.info('-------------------Finished Reinforcing---------------------------------')
+  logging.info('-------------------Launching Ships--------------------------------------')
+  LaunchShips(pw, launch_queue)
+  logging.info('-------------------Finsihed Launching Ships-----------------------------')
 
 
 def main():

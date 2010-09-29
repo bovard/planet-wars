@@ -6,7 +6,7 @@ from sys import stdout
 
 import logging
 LOG_FILENAME = 'War.log'
-logging.basicConfig(filename=LOG_FILENAME,level=logging.INFO, filemode='w')
+logging.basicConfig(filename=LOG_FILENAME,level=logging.CRITICAL, filemode='w')
 
 
 class Fleet:
@@ -218,15 +218,18 @@ class Planet:
         logging.debug('calced 0 free troops (neutral)')
     logging.debug('leaving, free troops: ' + repr(self._free_troops))
 
-  def CanDefend(self, max):
+  def CanDefend(self, turn):
     logging.debug('in CanDefend')
-    min = -99999999999999999
-    for i in range(max):
+    min = 99999999999999999
+    for i in range(turn+1):
       sum = self.GetFreeTroops(0, i)
+      logging.debug('For a distance of '+repr(i)+' the sum='+repr(sum))
       for j in range(1,i+1):
         for p in self._neighbors[j]:
           sum += p.GetFreeTroops(0, i-j)
+          logging.debug('sum='+repr(sum))
       if sum<min:
+        logging.debug('changing min! from '+repr(min)+' to '+repr(sum))
         min = sum
     logging.debug('done')
     return min
@@ -243,6 +246,8 @@ class Planet:
       return sum(self._free_troops[start_turn:end_turn+1])+sum(self._allied_reinforcements[start_turn:end_turn+1])
 
 
+  #commits free troops for turn=turn
+  #ships = # enemy ships to commit against
   def CommitFreeTroops(self, turn, ships):
     logging.debug('in CommitFreeTroops'+ repr(self._free_troops)+ ' turn='+repr(turn))
     if not(self._free_troops[turn]==0):
@@ -251,7 +256,6 @@ class Planet:
         ships_committed = self._free_troops[turn]
         if ships_committed > 0:
           self._free_troops[turn] -= ships_committed
-          logging.debug('committed '+repr(ships_committed))
         return ships_committed
       else:
         self._free_troops[turn] += ships
@@ -399,6 +403,7 @@ class Planet:
 
 class PlanetWars:
   def __init__(self, gameState, turn):
+    self._nearest = 999999
     logging.info('Initializing Planet Wars')
     logging.info('Turn number '+repr(turn))
     self._planets = []
@@ -407,6 +412,7 @@ class PlanetWars:
     self._distance = {}
     logging.info('initializing distance')
     self._max_distance = self.InitDistance()
+    self._max_regen = self.InitMaxRegen()
     logging.info('done with distances')
     logging.info('initialiaing and calculatings neighbors')
     self.InitNeighbors()
@@ -424,6 +430,39 @@ class PlanetWars:
     logging.info('done setting neighbors')
     logging.info('done with initialization')
 
+
+  def MaxRegen(self):
+    return self._max_regen
+
+  def InitMaxRegen(self):
+    max = -1
+    for p in self._planets:
+      if p.GrowthRate()>max:
+        max = p.GrowthRate()
+    return max
+
+  def GetGlobalAlliedFreeTroopLevels(self, turn=0):
+    sum = 0
+    for p in self.MyPlanets(turn):
+      sum += p.GetFreeTroops(0,turn)
+    return sum
+
+  def GetTroopBalance(self, turn=0):
+    diff = 0
+    for p in self.EnemyPlanets(turn):
+      diff -= p.GetNumShips(turn)
+    for p in self.MyPlanets(turn):
+      diff += p.GetNumShips(turn)
+    return diff
+
+  def GetRegenBalance(self, turn=0):
+    diff = 0
+    for p in self.EnemyPlanets(turn):
+      diff -= p.GrowthRate()
+    for p in self.MyPlanets(turn):
+      diff += p.GrowthRate()
+    return diff
+
   def ResetReinforcements(self):
     for p in self._planets:
       p.ResetReinforcements(self._max_distance)
@@ -431,10 +470,14 @@ class PlanetWars:
   def ResetNeighbors(self):
     for p in self._planets:
       p.ResetNeighbors()
+      
 
   def CalcNeighbors(self, turn):
+    self._nearest=9999999
     for p in self._planets:
       p.CalcNeighbors(turn, self._max_distance)
+      if p.NearestEnemy(0)<self._nearest:
+        self._nearest=p.NearestEnemy(0)
 
   def MaxDistance(self):
     return self._max_distance
