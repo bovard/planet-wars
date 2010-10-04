@@ -16,123 +16,181 @@ class Planet2(Planet):
     logging.debug('________________________________________________________________')
     return 0
 
-  #commits free troops for turn=turn
-  #ships = # enemy ships to commit against
-  # this should be called when defending against an incoming fleet
-  # this should only be called from the CommitReinforce method
-  # we know this is an allied planet!
-  def CommitDefendingTroops(self, turn, ships):
-    logging.debug('in CommitDefendingTroops with turn='+repr(turn) + ' ships='+repr(ships))
-    logging.debug('With FreeTroops       '+ repr(self._free_troops))
-    logging.debug('and ReinforcingTroops '+ repr(self._reinforcing_troops))
-    logging.debug('and DefendingTroops   '+ repr(self._defending_troops))
 
-    #need to make sure there are some troops to reinforce with
-    avaliable = self._free_troops[turn]+self._reinforcing_troops[turn]
-    if not(avaliable==0):
-      left = ships + avaliable
-      # if we have to commit all the troops:
-      # Note: we'll only be
+
+  '''
+  CommitTroops should be called when moving troops around between the possible troops queues,
+  free, reinforcing, defending, a list of the source lists is taken in list_source and
+  the seul destination list is taken as dest
+
+  The target should be the allied_reinforcement_troops list from the planet calling
+  CommitTroops
+
+  NOTE: This should only be called on allied planets! (but should be safe for others)
+  '''
+  def CommitTroops(self, turn, ships, list_source, dest, target=-1):
+    logging.debug('in CommitTroops with turn='+repr(turn) + ' ships='+repr(ships))
+    self.PrintSummary()
+
+    #make sure there are some troops to reinforce with
+    availiable=0
+    for list in list_source:
+      availiable += list[turn]
+
+    if availiable!=0:
+      logging.debug('there are '+repr(availiable)+' ships availiable')
+      left = ships + availiable
       if left * ships > 0:
-        ships_committed = self._free_troops[turn] + self._reinforcing_troops[turn]
-        if ships_committed > 0:
-          self._free_troops[turn] =0
-          self._reinforcing_troops[turn] =0
-          logging.debug('committing free troops to defence')
-        logging.debug('leaving CommitDefendingTroops')
-        logging.debug('With FreeTroops       '+ repr(self._free_troops))
-        logging.debug('and ReinforcingTroops '+ repr(self._reinforcing_troops))
-        logging.debug('and DefendingTroops   '+ repr(self._defending_troops))
-        return ships_committed
-      # we only have to commit some of the troops!
+        logging.debug('commiting all avaliable ships')
+        #if ships left is the same sign, we have to commit everyone
+        committed = 0
+        for list in list_source:
+          #if ships aren't of the same player, commit them
+          if list[turn]*ships<0:
+            committed += list[turn]
+            list[turn]=0
+        dest[turn]+=committed
+        logging.debug('leaving CommitTroops after committing '+repr(committed) +' troops!')
+        self.PrintSummary()
+        if target!=-1:
+          target[turn]=committed
+        return committed
       else:
-        logging.debug('commiting defenders')
-        # we're going to have to commit a few free troops
-        # we need to check how many more we have to commit than the current defenders
-        left= ships + self._reinforcing_troops[turn]
-        if left <= 0:
-          # we need to commit left free ships to defense!
-          self._free_troops[turn] += left
-          self._reinforcing_troops[turn] = 0
-          logging.debug('leaving CommitDefendingTroops after commiting '+repr(left)+' free troops to defesne')
-          logging.debug('With FreeTroops       '+ repr(self._free_troops))
-          logging.debug('and ReinforcingTroops '+ repr(self._reinforcing_troops))
-          logging.debug('and DefendingTroops   '+ repr(self._defending_troops))
-          return -1*ships
-        else:
-          # don't have to commit any free troops to defense!
-          self._reinforcing_troops[turn] += ships
-          logging.debug("didn't have to commit anything and leaving CommitDefendingTroops")
-          logging.debug('With FreeTroops       '+ repr(self._free_troops))
-          logging.debug('and ReinforcingTroops '+ repr(self._reinforcing_troops))
-          logging.debug('and DefendingTroops   '+ repr(self._defending_troops))
-          return -1*ships
+        #we are only going to have to commit a few
+        logging.debug('only committing a few troops')
+        committed = 0
+        for list in list_source:
+          #if ships aren't of the same player, commit them
+          if list[turn]*ships<0:
+            if abs(committed + list[turn]) >= ships:
+              from_list = ships + committed
+              list[turn] += from_list
+              dest[turn] += -1*ships
+              logging.debug('leaving CommitTroops after committing '+repr(-1*ships) +' troops!')
+              self.PrintSummary()
+              if target!=-1:
+                target[turn]=committed
+              return -1*ships
+            committed += list[turn]
+            list[turn]=0
+        logging.warning('ERROR in the logic of CommitTroops')
+        dest[turn]+=committed
+        logging.debug('leaving CommitTroops after committing '+repr(committed) +' troops!')
+        self.PrintSummary()
+        if target!=-1:
+          target[turn]=committed
+        return committed
     else:
-      logging.debug('leaving CommitTroops (there was nothing to reinforce with!)')
+      logging.debug('there were no troops here to commit in the given input lists')
+      logging.debug('leaving CommitTroops')
       return 0
 
+  '''
+  CanDefend should be called to see if an allied planet at turn-1 can be defended from an
+  enemy fleet arriving at turn
+  '''
+  def CanDefend(self, turn):
+    logging.debug('in CanDefend')
+    self.PrintSummary()
+    ships = self.GetAllTroops(turn)
 
-  #commits free troops for turn=turn
-  #ships = # ships needed (negative)
-  #this should be called when looking for ships to attack with
-  def CommitFreeTroops(self, turn, ships):
-    logging.debug('in CommitFreeTroops with turn='+repr(turn) + ' ships='+repr(ships))
-    logging.debug('and with free troops = '+ repr(self._free_troops))
-    #check to make sure there are some free troops to use
-    if not(self._free_troops[turn]==0):
-      left = ships + self._free_troops[turn]
-      # if we have to commit all the troops:
-      if left * ships > 0:
-        ships_committed = self._free_troops[turn]
-        if ships_committed > 0:
-          self._free_troops[turn] -= ships_committed
-        logging.debug('leaving CommitTroops')
-        return ships_committed
-      # we only have to commit some of the troops!
-      else:
-        # we're going to have to commit a few free troops
-        self._free_troops[turn] += ships
-        logging.debug('leaving CommitTroops')
-        return -1*ships
-    else:
-      logging.debug('leaving CommitFreeTroops (no free troops to commit here!)')
-      return 0
+    #check oneself first
+    logging.debug('looking for reinforcements from home planet')
+    logging.debug('Current balance of '+repr(ships)+' when trying to defend')
+    ships += self.GetAllTroops(0,turn-1)
+    logging.debug('Current balance of '+repr(ships)+' when trying to defend')
 
-  #commits free troops for turn=turn
-  #ships = # enemy ships to commit against
-  #this should be called when looking for ships to attack with
-  def CommitFreeAndReinforcingTroops(self, turn, ships):
-    logging.debug('in CommitFreeAndReinforcingTroops with turn='+repr(turn) + ' ships='+repr(ships))
-    logging.debug('and with free troops = '+ repr(self._free_troops))
-    logging.debug('with reinforcing troo= '+ repr(self._reinforcing_troops))
-    #check to make sure there are some free troops to use
-    if not(self._free_troops[turn]+self._reinforcing_troops[turn]==0):
-      left = ships + self._free_troops[turn] + self._reinforcing_troops[turn]
-      # if we have to commit all the troops:
-      if left * ships > 0:
-        ships_committed = self._free_troops[turn] + self._reinforcing_troops[turn]
-        if ships_committed > 0:
-          self._free_troops[turn] = 0
-          self._reinforcing_troops[turn] = 0
-          self._reinforcing_troops[turn]= ships_committed
-        logging.debug('leaving CommitFreeAndReinforcingTroops')
-        return self._reinforcing_troops[turn]
-      # we only have to commit some of the troops!
-      else:
-        # we're going to have to commit a few free troops
-        if self._free_troops[turn] + ships > 0:
-          self._free_troops[turn] += ships
-          self._reinforcing_troops[turn] += -1*ships
-        else:
-          self._reinforcing_troops[turn] += self._free_troops[turn]
-          self._free_troops[turn] = 0
-        logging.debug('leaving CommitFreeAndReinforcingTroops')
-        return -1*ships
-    else:
-      logging.debug('leaving CommitFreeTroops (no free troops to commit here!)')
-      return 0
+    #check levels on nearby planets for help
+    logging.debug('looking at nearby planets for troops')
+    for i in range(1,turn+1):
+      logging.debug('looking '+repr(i)+' units away')
+      for p in self._neighbors[i]:
+        ships += p.GetFreeTroops(0,turn-i) + p.GetReinforcingTroops(0, turn-i)
+        logging.debug('Current balance of '+repr(ships)+' when trying to defend')
+    if ships >= 0:
+      logging.debug('one can defend (leaving CanDefend)')
+      return 1
+    logging.debug('one cannot defend! (leaving CanDefend)')
     return 0
 
+
+  '''
+  CommitDefend should be called after CanDefend returns a true result
+  '''
+  def CommitDefend(self, turn):
+    ships = self.GetAllTroops(turn)
+    logging.debug('in CommitDefend')
+    self.PrintSummary()
+    logging.debug('there are '+repr(ships)+' left!')
+    if def_ships>0:
+      ships += self.GetReinforcingTroops(0, turn-1)
+    #add any enemies that are too close to the planet to the reinforce request
+
+    r_ally=0
+    r_enemy=1
+    done = 0
+    while (r_ally<=turn or r_enemy<=turn) and not(done):
+      logging.debug('top of main loop')
+      done = 1
+      while ships<0 and r_ally<=turn:
+        logging.debug('top of allied loop with r_ally='+repr(r_ally))
+        if r_ally==0:
+          #check oneself first
+          if self._owner[turn-1]==1:
+            logging.debug('looking for reinforcements from home planet')
+            for i in range(turn-1,-1,-1):
+              ships += self.CommitTroops(i, ships, [self._free_troops, self._reinforcing_troops], self._defending_troops, self._allied_reinforcements)
+              logging.debug('there are '+repr(ships)+' left!')
+          if ships<0:
+            logging.debug('increasing allied radius')
+            r_ally+=1
+        else:
+          #check allies for help
+          logging.debug('checking allies for help')
+          for p in self._neighbors[r_ally]:
+            if p.GetOwner(r_ally-1)==1:
+              j=turn-r_ally
+              while ships<0 and j>=0:
+                logging.info('searching through planets j='+repr(j))
+                logging.debug('committing free troops')
+                enforcements = p.CommitTroops(j, ships, [p.FreeTroops(), p.ReinforcingTroops()], p.DefendingTroops(), self._allied_reinforcements)
+                ships += enforcements
+                logging.debug('there are '+repr(ships)+' left!')
+
+                #launch defending troops in necessary
+                if r_ally==turn and j==0 and enforcements>0:
+                  logging.info('sending '+repr(enforcements)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(r_ally))
+                  self._launch_queue[p.PlanetID()][self._planet_id]+=enforcements
+
+                j-=1
+          logging.debug('increasing allied radius')
+          r_ally+=1
+
+      while ships>=0 and r_enemy<=turn:
+        done = 0
+        logging.debug('top of enemy loop with r_enemy='+repr(r_enemy))
+        for p in self._neighbors[r_enemy]:
+          if p.GetOwner(r_enemy-1)==2:
+            ships += p.GetFreeTroops(0, turn-r_enemy)
+            logging.debug('there are '+repr(ships)+' left!')
+        logging.debug('botton of enemy loop!')
+        logging.debug('increasing enemy radius')
+        r_enemy+=1
+    if ships >= 0:
+      self._free_troops[turn]=ships
+      logging.debug('sucess! leaving CommitDefend')
+      self.PrintSummary()
+      return 1
+    self._free_troops[turn]=ships
+    logging.debug('failed! CommitDefend')
+    self.PrintSummary()
+    return 0
+
+
+  '''
+  CanReinforce should be called on a planet on turn t, if there exists an enemy planet
+  p such that distance(self,p)==t
+  '''
   def CanReinforce(self, turn):
     logging.debug('in CanReinforce')
     self.PrintSummary()
@@ -161,9 +219,6 @@ class Planet2(Planet):
     logging.debug('in CommitReinforce')
     self.PrintSummary()
     logging.debug('there are '+repr(ships)+' left!')
-    def_ships = ships
-    if def_ships>0:
-      ships += self.GetReinforcingTroops(0, turn-1)
     #add any enemies that are too close to the planet to the reinforce request
 
     r_ally=0
@@ -175,26 +230,12 @@ class Planet2(Planet):
       done = 1
       while ships<0 and r_ally<=turn:
         logging.debug('top of allied loop with r_ally='+repr(r_ally))
-        if not(r_enemy_last_seen==r_enemy):
-          for i in range(r_enemy_last_seen,r_enemy):
-            for p in self._neighbors[i]:
-              if def_ships >= 0:
-                ships += p.GetReinforcingTroops(0, turn-i)
-          done = 0
-
-          r_enemy_last_seen=r_enemy
-        elif r_ally==0:
+        if r_ally==0:
           #check oneself first
           if self._owner[turn-1]==1:
             logging.debug('looking for reinforcements from home planet')
-            for i in range(turn-1,-1,-1):
-              if def_ships >= 0:
-                ships += self.CommitFreeTroops(i, ships)
-              else:
-                enforcements = self.CommitDefendingTroops(i, ships)
-                ships += enforcements
-                def_ships += enforcements
-                self._defending_troops[i]+=enforcements
+            for i in range(turn,-1,-1):
+              ships += self.CommitTroops(i, ships, [self._free_troops, self._reinforcing_troops], self._reinforcing_troops)
               logging.debug('there are '+repr(ships)+' left!')
           if ships<0:
             logging.debug('increasing allied radius')
@@ -207,21 +248,14 @@ class Planet2(Planet):
               j=turn-r_ally
               while ships<0 and j>=0:
                 logging.info('searching through planets j='+repr(j))
-                if def_ships >= 0:
-                  logging.debug('committing free troops')
-                  enforcements = self.CommitFreeTroops(j, ships)
-                  ships += enforcements
-                  logging.debug('there are '+repr(ships)+' left!')
-                else:
-                  logging.debug('committing defending troops with j='+repr(j)+' and ships='+repr(ships))
-                  enforcements = self.CommitDefendingTroops(j, ships)
-                  ships += enforcements
-                  def_ships += enforcements
-                  self._defending_troops[j]+=enforcements
-                  logging.debug('there are '+repr(ships)+' left!')
-                #only launch ships if we are defening against an attack... ?
+                logging.debug('committing free troops')
+                enforcements = p.CommitTroops(j, ships, [p.FreeTroops(), p.ReinforcingTroops()], p.ReinforcingTroops())
+                ships += enforcements
+                logging.debug('there are '+repr(ships)+' left!')
+
+                #do we really want to launch these????
                 if r_ally==turn and j==0 and enforcements>0:
-                  logging.info('sending '+repr(enforcements)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(i))
+                  logging.info('sending '+repr(enforcements)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(r_ally))
                   self._launch_queue[p.PlanetID()][self._planet_id]+=enforcements
 
                 j-=1
@@ -373,7 +407,7 @@ class Planet2(Planet):
             k = turn-j
             if p.GetOwner(k)==1:
               logging.debug('found allied planet '+repr(p.PlanetID()))
-              reinforcement = p.CommitFreeTroops(k, ships)
+              reinforcement = p.CommitTroops(k, ships, [p.FreeTroops(), p.ReinforcingTroops()], p.ReinforcingTroops(), self._allied_reinforcements)
               ships += reinforcement
               logging.debug('there are '+repr(ships)+' left!')
               if i==turn and k==0 and reinforcement>0:
@@ -438,7 +472,7 @@ class Planet2(Planet):
         logging.debug('looking at planet '+repr(p.PlanetID())+' with troops= '+repr(p.GetNumShips()))
         for j in range(turn,i-1,-1):
           k = turn-j
-          reinforcement = p.CommitFreeAndReinforcingTroops(k, ships)
+          reinforcement = p.CommitTroops(k, ships, [p.FreeTroops(), p.ReinforcingTroops()], p.ReinforcingTroops(), self._allied_reinforcements)
           logging.debug('pulled '+repr(reinforcement)+' troops from the planet for turn '+repr(k))
           ships += reinforcement
           logging.debug('only '+repr(ships)+' left!')

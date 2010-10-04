@@ -9,6 +9,7 @@
 import logging
 
 from PlanetWars import PlanetWars
+from Planet2 import Planet2 as Planet
 
 
 def MainLoop(pw):
@@ -95,8 +96,9 @@ def AttackNeutrals(pw):
           logging.debug('can take over!')
           done = 0
           i = 1
-          while i < p.FarthestAlly() and not(done):
-            logging.debug('looking '+repr(i)+'units away')
+          logging.debug('Longest Distance to look is: '+repr(p.FarthestAlly()))
+          while i <= p.FarthestAlly()+1 and not(done):
+            logging.debug('Starting CanTakeNeutral looking '+repr(i)+' units away')
             if p.CanTakeNeutral(i):
               done = 1
               p.CommitTakeNeutral(i)
@@ -142,8 +144,9 @@ def AttackNeutrals(pw):
           logging.debug('can take over!')
           done = 0
           i = 1
-          while i < p.NearestAlly() and not(done):
-            logging.debug('looking '+repr(i)+'units away')
+          logging.debug('Longest Distance to look is: '+repr(p.FarthestAlly()))
+          while i <= p.NearestAlly()+1 and not(done):
+            logging.debug('Starting CanTakeNeutral looking '+repr(i)+' units away')
             if p.CanTakeNeutral(i):
               done = 1
               p.CommitTakeNeutral(i)
@@ -179,7 +182,7 @@ def Reinforce(pw):
                 nearest_enemy = o.NearestEnemy(i)
         if to_send>=0:
           pw.AddLaunch(p.PlanetID(),to_send,p.GetFreeTroops())
-          p.CommitFreeTroops(0,p.GetFreeTroops())
+          p.CommitTroops(0,p.GetFreeTroops(),[p.FreeTroops()],p.ReinforcingTroops())
 
 
 def LaunchAttack(pw):

@@ -20,6 +20,9 @@ class Planet:
     self._reinforcing_troops=[]
     # defending troops are committed to respond to an actualy enemy attack
     self._defending_troops=[]
+    # ally reinforcing troops are troops that are currently committed on allied planets
+    # that are committed to come help out your planet
+    self._allied_reinforcements = []
     self._nearest_ally = []
     self._nearest_enemy = []
     self._farthest_enemy = []
@@ -82,9 +85,11 @@ class Planet:
   def ResetReinforcements(self, max):
     self._reinforcing_troops=[]
     self._defending_troops=[]
+    self._allied_reinforcements=[]
     for i in range(max+1):
       self._reinforcing_troops.append(0)
       self._defending_troops.append(0)
+      self._allied_reinforcements.append(0)
 
   def ResetNeighbors(self):
     self._nearest_ally = []
@@ -204,7 +209,7 @@ class Planet:
     if end_turn == -1:
       return self._free_troops[start_turn]
     else:
-      logging.debug('returning a range of free troops ['+repr(start_turn)+','+repr(end_turn)+']')
+      logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._free_troops[start_turn:end_turn+1])
 
   def GetDefendingTroops(self, start_turn=0, end_turn=-1):
@@ -220,12 +225,22 @@ class Planet:
     if end_turn == -1:
       return self._reinforcing_troops[start_turn]
     else:
-      logging.debug('returning a range of free troops ['+repr(start_turn)+','+repr(end_turn)+']')
+      logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._reinforcing_troops[start_turn:end_turn+1])
+
+
+  def GetAlliedReinforcements(self, start_turn=0, end_turn=-1):
+    logging.debug('in GetAlliedReinforcements ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
+    if end_turn == -1:
+      return self._allied_reinforcements[start_turn]
+    else:
+      logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
+      return sum(self._allied_reinforcements[start_turn:end_turn+1])
 
   def GetAllTroops(self, start_turn=0, end_turn=-1):
     logging.debug('in GetAllTroops')
-    return self.GetFreeTroops(start_turn, end_turn) + self.GetDefendingTroops(start_turn, end_turn) + self.GetReinforcingTroops(start_turn, end_turn)
+    return self.GetFreeTroops(start_turn, end_turn) + self.GetDefendingTroops(start_turn, end_turn) \
+    + self.GetReinforcingTroops(start_turn, end_turn) + self.GetAlliedReinforcements(start_turn, end_turn)
 
 
 
@@ -255,6 +270,15 @@ class Planet:
   def GetNumShips(self, turn=0):
     logging.debug('in GetNumShips with turn='+repr(turn))
     return self._num_ships[turn]
+
+  def FreeTroops(self):
+    return self._free_troops
+  
+  def ReinforcingTroops(self):
+    return self._reinforcing_troops
+  
+  def DefendingTroops(self):
+    return self._defending_troops
 
   def SetNumShips(self, new_num_ships):
     logging.debug('in SetNumShips with new_num_ships='+repr(new_num_ships))
