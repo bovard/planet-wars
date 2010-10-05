@@ -17,6 +17,7 @@ class Planet2(Planet):
       logging.debug('Attacking List  - '+repr(self._attacking_troops))
       logging.debug('Allied Reinforce- '+repr(self._allied_reinforcements))
       logging.debug('________________________________________________________________')
+      return 0
     else:
       logging.info('________________________________________________________________')
       logging.info('Planet '+repr(self._planet_id)+' with '+repr(self._num_ships[0]))
@@ -29,7 +30,7 @@ class Planet2(Planet):
       logging.info('Attacking List  - '+repr(self._attacking_troops))
       logging.info('Allied Reinforce- '+repr(self._allied_reinforcements))
       logging.info('________________________________________________________________')
-    return 0
+      return 0
 
 
 

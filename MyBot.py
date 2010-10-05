@@ -172,6 +172,7 @@ def AttackNeutrals(pw):
                       p.CommitDefend(j)
             i +=1
 
+'''
     logging.debug('done with cycle2')
     logging.debug('cycle 3')
     to_attack=[]
@@ -219,6 +220,7 @@ def AttackNeutrals(pw):
                     if p.CanDefend(j):
                       p.CommitDefend(j)
             i +=1
+'''
 
 
 
