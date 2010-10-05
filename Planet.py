@@ -1,8 +1,8 @@
-import logging
+#import #logging
 
 class Planet:
   def __init__(self, planet_id, owner, num_ships, growth_rate, x, y):
-    logging.debug('creating a planet')
+    #logging.debug('creating a planet')
     self._planet_id = planet_id
     self._owner = []
     self._owner.append(owner)
@@ -33,7 +33,7 @@ class Planet:
     self._farthest_enemy.append(0)
     self._farthest_ally.append(0)
     self._launch_queue = -1
-    logging.debug('done')
+    #logging.debug('done')
 
 
 
@@ -69,7 +69,7 @@ class Planet:
 
 
   def IsOutsideAlliedCloud(self, max):
-    logging.debug('in IsOnTheFront')
+    #logging.debug('in IsOnTheFront')
     is_outside = 1
     for i in range(0, self._nearest_enemy[0]):
       for p in self._neighbors[i]:
@@ -114,7 +114,7 @@ class Planet:
 
   # this should be called after troop levels are set (even when creating a planet!)(done)
   def ResetFreeTroops(self):
-    logging.debug('in ResetFreeTroops')
+    #logging.debug('in ResetFreeTroops')
     self._free_troops = []
     if self._owner[0] == 1:
       self._free_troops.append(self._num_ships[0])
@@ -122,7 +122,7 @@ class Planet:
       self._free_troops.append(-1*self._num_ships[0])
     else:
       self._free_troops.append(0)
-    logging.debug('done')
+    #logging.debug('done')
 
   #called after CalCOwnerAndNumShips
   def CalcNeighbors(self, turn, max):
@@ -150,7 +150,7 @@ class Planet:
     levels[self._owner[turn-1]] += self._num_ships[turn-1]
     if not(self._owner[turn-1] == 0):
       levels[self._owner[turn-1]] += self._growth_rate
-    logging.debug('levels: '+repr(levels))
+    #logging.debug('levels: '+repr(levels))
     max = -1
     for i in levels:
       if i>max:
@@ -191,52 +191,52 @@ class Planet:
         self._free_troops.append(max2-max1)
       else:
         self._free_troops.append(0)
-    logging.debug('leaving, free troops: ' + repr(self._free_troops))
+    #logging.debug('leaving, free troops: ' + repr(self._free_troops))
 
 
   def GetFreeTroops(self, start_turn=0, end_turn=-1):
-    logging.debug('in GetFreeTroops ' + repr(self._free_troops)+ ' turn='+repr(start_turn))
+    #logging.debug('in GetFreeTroops ' + repr(self._free_troops)+ ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._free_troops[start_turn]
     else:
-      logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
+      #logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._free_troops[start_turn:end_turn+1])
 
   def GetDefendingTroops(self, start_turn=0, end_turn=-1):
-    logging.debug('in GetDefendingTroops ' + repr(self._defending_troops)+ ' turn='+repr(start_turn))
+    #logging.debug('in GetDefendingTroops ' + repr(self._defending_troops)+ ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._defending_troops[start_turn]
     else:
-      logging.debug('returning a range of defending troops troops ['+repr(start_turn)+','+repr(end_turn)+']')
+      #logging.debug('returning a range of defending troops troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._defending_troops[start_turn:end_turn+1])
 
   def GetReinforcingTroops(self, start_turn=0, end_turn=-1):
-    logging.debug('in GetReinforcingTroops ' + repr(self._reinforcing_troops) + ' turn='+repr(start_turn))
+    #logging.debug('in GetReinforcingTroops ' + repr(self._reinforcing_troops) + ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._reinforcing_troops[start_turn]
     else:
-      logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
+      #logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._reinforcing_troops[start_turn:end_turn+1])
 
 
   def GetAlliedReinforcements(self, start_turn=0, end_turn=-1):
-    logging.debug('in GetAlliedReinforcements ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
+    #logging.debug('in GetAlliedReinforcements ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._allied_reinforcements[start_turn]
     else:
-      logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
+      #logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._allied_reinforcements[start_turn:end_turn+1])
 
   def GetAttackingTroops(self, start_turn=0, end_turn=-1):
-    logging.debug('in GetAttackingTroops ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
+    #logging.debug('in GetAttackingTroops ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._attacking_troops[start_turn]
     else:
-      logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
+      #logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._attacking_troops[start_turn:end_turn+1])
 
   def GetAllTroops(self, start_turn=0, end_turn=-1):
-    logging.debug('in GetAllTroops')
+    #logging.debug('in GetAllTroops')
     return self.GetFreeTroops(start_turn, end_turn) + self.GetDefendingTroops(start_turn, end_turn) \
       + self.GetReinforcingTroops(start_turn, end_turn) + self.GetAlliedReinforcements(start_turn, end_turn) \
       + self.GetAttackingTroops(start_turn, end_turn)
@@ -267,7 +267,7 @@ class Planet:
     return self._owner[turn]
 
   def GetNumShips(self, turn=0):
-    logging.debug('in GetNumShips with turn='+repr(turn))
+    #logging.debug('in GetNumShips with turn='+repr(turn))
     return self._num_ships[turn]
 
   def FreeTroops(self):
@@ -283,9 +283,9 @@ class Planet:
     return self._attacking_troops
 
   def SetNumShips(self, new_num_ships):
-    logging.debug('in SetNumShips with new_num_ships='+repr(new_num_ships))
+    #logging.debug('in SetNumShips with new_num_ships='+repr(new_num_ships))
     self._num_ships = []
-    logging.debug('adding some new ships'+repr(new_num_ships))
+    #logging.debug('adding some new ships'+repr(new_num_ships))
     self._num_ships.append(new_num_ships)
 
   def GrowthRate(self):
