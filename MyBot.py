@@ -22,14 +22,28 @@ def MainLoop(pw):
     for p in pw.Planets():
       p.CalcFreeTroops(i+1)
     logging.debug('getting requets')
+
+    for p in pw.Planets():
+      p.PrintSummary(1)
+
     #figure out requests
-    for dist in range(1, pw.MaxDistance()):
+    for dist in range(1, pw.MaxDistance()+1):
       for p in pw.MyPlanets(i):
-        if p.NearestEnemy(i)==dist or p.GetFreeTroops(i+1)<0:
+        if p.GetEnemyArrival(i+1)<0 and p.GetOwner(i)==1:
+          logging.info('defending Planet '+repr(p.PlanetID())+'on turn'+repr(i+1)+' because '+repr(p.GetFreeTroops(i+1)) + ' < 0')
+          if p.CanDefend(i+1):
+            logging.info('Planet'+repr(p.PlanetID())+' is being defended on turn '+repr(i+1))
+            p.CommitDefend(i+1)
+        if p.NearestEnemy()==dist:
           logging.debug('reinfrocing a planet')
           if p.CanReinforce(i+1):
-            logging.info('Planet'+repr(p.PlanetID())+' is being reinforced on turn '+repr(i+1))
+            logging.debug('Planet'+repr(p.PlanetID())+' is being reinforced on turn '+repr(i+1))
             p.CommitReinforce(i+1)
+    for dist in range(1, pw.MaxDistance()+1):
+      for p in pw.EnemyPlanets(i):
+        if p.NearestAlly()==dist:
+          if not(p.CanReinforce(i+1)):
+            p.EnemyCommitReinforce(i+1)
 
     #calculate owner and number of ships
     logging.debug('calculating owner and numnber of ships')
@@ -38,7 +52,7 @@ def MainLoop(pw):
 
   logging.debug('i should be done')
   for p in pw.Planets():
-    p.PrintSummary()
+    p.PrintSummary(1)
 
 
 def AttackEnemies(pw):
@@ -92,7 +106,7 @@ def AttackNeutrals(pw):
       p = target[1]
       logging.debug('pulled planet '+repr(p.PlanetID())+' with '+repr(p.GetNumShips())+' and calc='+repr(min))
       if p.FarthestEnemy() > 0 and p.NearestAlly() < pw.MaxDistance:
-        if p.CanSafeTakeNeutral(p.FarthestEnemy()):
+        if p.NearestEnemy() > pw.GetGlobalNearestEnemy() or p.CanSafeTakeNeutral(p.FarthestEnemy()):
           logging.debug('can take over!')
           done = 0
           i = 1
@@ -103,9 +117,10 @@ def AttackNeutrals(pw):
               done = 1
               p.CommitTakeNeutral(i)
               deja_attacked.append(p)
-              for j in range(i+1,pw.MaxDistance()):
-                      if p.CanReinforce(j):
-                        p.CommitReinforce(j)
+              for j in range(i,pw.MaxDistance()):
+                if p.GetFreeTroops(j)<0:
+                    if p.CanDefend(j):
+                      p.CommitDefend(j)
             i +=1
 
 
@@ -140,7 +155,7 @@ def AttackNeutrals(pw):
       p = target[1]
       logging.debug('pulled planet '+repr(p))
       if p.FarthestEnemy() > 0 and p.NearestAlly() < pw.MaxDistance:
-        if p.CanSafeTakeNeutral(p.FarthestEnemy()):
+        if p.NearestEnemy() > pw.GetGlobalNearestEnemy() or p.CanSafeTakeNeutral(p.FarthestEnemy()):
           logging.debug('can take over!')
           done = 0
           i = 1
@@ -152,8 +167,57 @@ def AttackNeutrals(pw):
               p.CommitTakeNeutral(i)
               deja_attacked.append(p)
               for j in range(i,pw.MaxDistance()):
-                      if p.CanReinforce(j):
-                        p.CommitReinforce(j)
+                if p.GetFreeTroops(j)<0:
+                    if p.CanDefend(j):
+                      p.CommitDefend(j)
+            i +=1
+
+    logging.debug('done with cycle2')
+    logging.debug('cycle 3')
+    to_attack=[]
+    logging.debug('looking for neturals to attack')
+    logging.debug('collecting targets')
+    for p in pw.NeutralPlanets():
+      if p.GrowthRate()>0 and not(p in deja_attacked):
+        logging.debug('calculating')
+        logging.debug('calculating with ships '+repr(p.GetNumShips())+' growth: '+repr(p.GrowthRate())+ ' nearest: '+repr(p.NearestAlly()))
+        calc = p.GetNumShips()/p.GrowthRate()
+        logging.debug('calc = '+repr(calc))
+        logging.debug('done')
+        logging.debug('adding')
+        to_attack.append([calc,p])
+    logging.debug('done collecting targets')
+
+    logging.debug('cycling through attacks!')
+    while len(to_attack)>0:
+      min = 99999
+      target = -1
+      for entry in to_attack:
+        if entry[0]<min:
+          min=entry[0]
+          target = entry
+
+      logging.debug('found target')
+      to_attack.remove(target)
+      logging.debug('removed target')
+      p = target[1]
+      logging.debug('pulled planet '+repr(p))
+      if p.FarthestEnemy() > 0 and p.NearestAlly() < pw.MaxDistance:
+        if p.NearestAlly()*2 < p.NearestEnemy() and target[0]<pw.GetGlobalNearestEnemy():
+          logging.debug('can take over!')
+          done = 0
+          i = 1
+          logging.debug('Longest Distance to look is: '+repr(p.FarthestAlly()))
+          while i <= p.NearestAlly()+1 and not(done):
+            logging.debug('Starting CanTakeNeutral looking '+repr(i)+' units away')
+            if p.CanRecklessTakeOver(i):
+              done = 1
+              p.CommitRecklessTakeOver(i)
+              deja_attacked.append(p)
+              for j in range(i,pw.MaxDistance()):
+                if p.GetFreeTroops(j)<0:
+                    if p.CanDefend(j):
+                      p.CommitDefend(j)
             i +=1
 
 
@@ -161,41 +225,37 @@ def AttackNeutrals(pw):
 def Reinforce(pw):
   logging.info('entering reinforcement phase')
   for p in pw.MyPlanets():
-    logging.debug('starting to reinforce planet'+repr(p.PlanetID()))
-    logging.debug('sending reinforcements! of '+repr(p.GetFreeTroops()))
-    if p.GetFreeTroops()>0:
+    logging.info('starting to reinforce from planet'+repr(p.PlanetID()))
+    logging.info('sending reinforcements! of '+repr(p.GetFreeTroops())+ ' or '+repr(p.GetReinforcingTroops()))
+    if p.GetFreeTroops()>0 or p.GetReinforcingTroops()>0:
+      logging.info('have some troops to reinforce with')
       near_enemy = p.NearestEnemy()
       if near_enemy <= pw.MaxDistance():
         start_dist = int((3*near_enemy)/4)+1
-        logging.debug("start_dist="+repr(start_dist))
+        logging.info("start_dist="+repr(start_dist))
         to_send = -1
         nearest_enemy = p.NearestEnemy()
         for i in range(start_dist,0,-1):
-          logging.debug('here, i='+repr(i))
           for o in p.GetNeighbors(i):
-            logging.debug('here2')
             if o.GetOwner(i)==1:
-              logging.debug('here3')
+              logging.info('Found Allied Planet '+repr(o.PlanetID()))
               if o.NearestEnemy(i)<nearest_enemy and not(p.PlanetID()==o.PlanetID()):
-                logging.debug('here4')
+                logging.info('Allied Planet '+repr(o.PlanetID())+ ' might be reinforced!')
                 to_send = o.PlanetID()
                 nearest_enemy = o.NearestEnemy(i)
         if to_send>=0:
-          pw.AddLaunch(p.PlanetID(),to_send,p.GetFreeTroops())
+          logging.info('Launching reinforcements!')
+          pw.AddLaunch(p.PlanetID(),to_send,p.GetFreeTroops()+int(p.GetReinforcingTroops()))
           p.CommitTroops(0,p.GetFreeTroops(),[p.FreeTroops()],p.ReinforcingTroops())
 
 
 def LaunchAttack(pw):
-  target = -1
-  nearest = 9999999
-  for p in pw.EnemyPlanets():
-    if p.NearestAlly()<nearest:
-      target = p
-      nearest = p.NearestAlly()
-  if not(target==-1):
-    logging.info('targetting planet '+repr(target.PlanetID())+' with defenses '+repr(target.GetNumShips()))
-    for o in pw.MyPlanets():
-      pw.AddLaunch(o.PlanetID(),target.PlanetID(),o.GetFreeTroops(0))
+  for p in pw.MyPlanets():
+    if p.NearestEnemy() == pw.GetGlobalNearestEnemy():
+      for o in pw.EnemyPlanets():
+        if pw.Distance(p.PlanetID(),o.PlanetID())==pw.GetGlobalNearestEnemy():
+          pw.AddLaunch(p.PlanetID(),o.PlanetID(),int(p.GetFreeTroops()/2+p.GetReinforcingTroops()/2))
+          p.CommitTroops(0,int(p.GetFreeTroops()/2+p.GetReinforcingTroops()/2),[p.FreeTroops()],p.DefendingTroops())
 
 def DoTurn(pw, turn):
   logging.info('-------------------Starting the Main Loop-------------------------------')
@@ -212,9 +272,9 @@ def DoTurn(pw, turn):
   Reinforce(pw)
   logging.info('-------------------Finished Reinforcing---------------------------------')
 
-#  logging.info('-------------------Launching An Attack!---------------------------------')
-#  LaunchAttack(pw)
-#  logging.info('-------------------Finished Launching An Attack!------------------------')
+  ##logging.info('-------------------Launching An Attack!---------------------------------')
+  #LaunchAttack(pw)
+  ##logging.info('-------------------Finished Launching An Attack!------------------------')
 
   
   logging.info('-------------------Launching Ships--------------------------------------')
