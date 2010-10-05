@@ -238,8 +238,7 @@ class Planet:
   def GetAllTroops(self, start_turn=0, end_turn=-1):
     #logging.debug('in GetAllTroops')
     return self.GetFreeTroops(start_turn, end_turn) + self.GetDefendingTroops(start_turn, end_turn) \
-      + self.GetReinforcingTroops(start_turn, end_turn) + self.GetAlliedReinforcements(start_turn, end_turn) \
-      + self.GetAttackingTroops(start_turn, end_turn)
+      + self.GetReinforcingTroops(start_turn, end_turn) + self.GetAttackingTroops(start_turn, end_turn)
 
 
 

@@ -25,20 +25,21 @@ def MainLoop(pw):
 
     #figure out requests
     for dist in range(1, pw.MaxDistance()+1):
+      #logging.debug('dist='+repr(dist))
       for p in pw.MyPlanets(i):
-        if p.GetEnemyArrival(i+1)<0 and p.GetOwner(i)==1:
-          #logging.info('defending Planet '+repr(p.PlanetID())+'on turn'+repr(i+1)+' because '+repr(p.GetFreeTroops(i+1)) + ' < 0')
+        if p.GetEnemyArrival(i+1)>0 and p.GetOwner(i)==1 and p.GetFreeTroops(i+1) < 0:
+          #logging.info('defending Planet '+repr(p.PlanetID())+'on turn'+repr(i+1)+' because '+repr(p.GetEnemyArrival(i+1)) + ' > 0')
           if p.CanDefend(i+1):
             #logging.info('Planet'+repr(p.PlanetID())+' is being defended on turn '+repr(i+1))
             p.CommitDefend(i+1)
-        if p.NearestEnemy()==dist:
-          #logging.debug('reinfrocing a planet')
+        if (p.NearestEnemy()==i and p.NearestEnemy()==dist) or (p.FarthestEnemy()==i and p.FarthestEnemy()==dist):
+          #logging.debug('reinfrocing a planet because '+repr(p.NearestEnemy())+" == "+repr(dist))
           if p.CanReinforce(i+1):
             #logging.debug('Planet'+repr(p.PlanetID())+' is being reinforced on turn '+repr(i+1))
             p.CommitReinforce(i+1)
     for dist in range(1, pw.MaxDistance()+1):
       for p in pw.EnemyPlanets(i):
-        if p.NearestAlly()==dist:
+        if (p.NearestAlly()==i and p.NearestAlly()<=dist) or (p.FarthestAlly()==i and p.FarthestAlly()==dist):
           if not(p.CanReinforce(i+1)):
             p.EnemyCommitReinforce(i+1)
 
@@ -73,7 +74,7 @@ def AttackEnemies(pw):
 
 def AttackNeutrals(pw):
   deja_attacked=[]
-  if (pw.GetGlobalNearestEnemy()<=pw.MaxDistance() and pw.GetGlobalFarthestEnemy()>0):
+  if (pw.GetGlobalNearestEnemy()<=pw.MaxDistance() and pw.GetGlobalFarthestEnemy()>0 and len(pw.MyPlanets())>0):
     to_attack=[]
     #logging.debug('looking for neturals to attack')
     #logging.debug('collecting targets')
@@ -110,7 +111,7 @@ def AttackNeutrals(pw):
           #logging.debug('Longest Distance to look is: '+repr(p.FarthestAlly()))
           while i <= p.FarthestAlly()+1 and not(done):
             #logging.debug('Starting CanTakeNeutral looking '+repr(i)+' units away')
-            if p.CanTakeNeutral(i):
+            if p.NearestAlly(i) < p.NearestEnemy(i) and p.CanTakeNeutral(i):
               done = 1
               p.CommitTakeNeutral(i)
               deja_attacked.append(p)
@@ -152,14 +153,14 @@ def AttackNeutrals(pw):
       p = target[1]
       #logging.debug('pulled planet '+repr(p))
       if p.FarthestEnemy() > 0 and p.NearestAlly() < pw.MaxDistance:
-        if p.NearestEnemy() > pw.GetGlobalNearestEnemy() or p.CanSafeTakeNeutral(p.FarthestEnemy()):
+        if  p.CanSafeTakeNeutral(p.FarthestEnemy()) and p.NearestAlly() < p.NearestEnemy():
           #logging.debug('can take over!')
           done = 0
           i = 1
           #logging.debug('Longest Distance to look is: '+repr(p.FarthestAlly()))
           while i <= p.NearestAlly()+1 and not(done):
             #logging.debug('Starting CanTakeNeutral looking '+repr(i)+' units away')
-            if p.CanTakeNeutral(i) and p.CanSafeTakeNeutral(p.FarthestEnemy(i)):
+            if p.NearestAlly(i) < p.NearestEnemy(i) and p.CanTakeNeutral(i) and p.CanSafeTakeNeutral(p.FarthestEnemy(i)):
               done = 1
               p.CommitTakeNeutral(i)
               deja_attacked.append(p)

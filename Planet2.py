@@ -109,7 +109,7 @@ class Planet2(Planet):
   def CanDefend(self, turn):
     #logging.debug('in CanDefend')
     self.PrintSummary()
-    ships = self.GetAllTroops(turn)
+    ships = 0
 
     #check oneself first
     #logging.debug('looking for reinforcements from home planet')
@@ -154,7 +154,7 @@ class Planet2(Planet):
           if self._owner[turn-1]==1:
             #logging.debug('looking for reinforcements from home planet')
             for i in range(turn-1,-1,-1):
-              ships += self.CommitTroops(i, ships, [self._reinforcing_troops, self._free_troops], self._defending_troops, self._allied_reinforcements)
+              ships += self.CommitTroops(i, ships, [self._reinforcing_troops, self._free_troops], self._defending_troops)
               #logging.debug('there are '+repr(ships)+' left!')
           if ships<0:
             #logging.debug('increasing allied radius')

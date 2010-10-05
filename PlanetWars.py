@@ -8,7 +8,7 @@ from Planet2 import Planet2 as Planet
 
 #import #logging
 #LOG_FILENAME = 'War.log'
-#logging.basicConfig(filename=LOG_FILENAME,level=#logging.INFO, filemode='w')
+#logging.basicConfig(filename=LOG_FILENAME,level=#logging.DEBUG, filemode='w')
 
 
 
