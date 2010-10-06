@@ -6,6 +6,7 @@ from sys import stdout
 from Fleet import Fleet
 from Planet2 import Planet2 as Planet
 
+
 #import #logging
 #LOG_FILENAME = 'War.log'
 #logging.basicConfig(filename=LOG_FILENAME,level=#logging.DEBUG, filemode='w')
@@ -29,6 +30,7 @@ class PlanetWars:
     #logging.info('initializing distance')
     self._max_distance = self.InitDistance()
     self._max_regen = self.InitMaxRegen()
+    self.InitConnectedness()
     #logging.info('done with distances')
     #logging.info('initialiaing and calculatings neighbors')
     self.InitNeighbors()
@@ -48,6 +50,19 @@ class PlanetWars:
     self._launch_queue = self.InitializeLaunchQueue()
     #logging.info('done setting launch queue')
     #logging.info('done with initialization')
+
+
+  '''
+  InitConnectedness should initialize the connectedness scores of all the planets
+  It must be called after initialize distance
+  '''
+
+  def InitConnectedness(self):
+    for p in self.Planets():
+      con = 0
+      for o in self.Planets():
+        con += (self.Distance(p.PlanetID(), o.PlanetID())**2)
+      p.SetConnectedness(con)
 
 
   def InitializeLaunchQueue(self):

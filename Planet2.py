@@ -267,10 +267,10 @@ class Planet2(Planet):
                 ships += enforcements
                 #logging.debug('there are '+repr(ships)+' left!')
 
-                #do we really want to launch these????
-                if r_ally==turn and j==0 and enforcements>0:
-                  #logging.info('sending '+repr(enforcements)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(r_ally))
-                  self._launch_queue[p.PlanetID()][self._planet_id]+=enforcements
+#                #do we really want to launch these????
+#                if r_ally==turn and j==0 and enforcements>0:
+#                  #logging.info('sending '+repr(enforcements)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(r_ally))
+#                  self._launch_queue[p.PlanetID()][self._planet_id]+=enforcements
 
                 j-=1
           #logging.debug('increasing allied radius')
@@ -304,10 +304,10 @@ class Planet2(Planet):
 
     r_enemy=0
     r_ally=1
-    done = 0
-    while (r_ally<=turn or r_enemy<=turn) and not(done):
+    done = ships+1
+    while (r_ally<=turn or r_enemy<=turn) and done!=ships:
       #logging.debug('top of main loop')
-      done = 1
+      done = ships
       while ships>0 and r_enemy<=turn:
         #logging.debug('top of enemy loop with r_enemy='+repr(r_enemy))
         if r_enemy==0:
@@ -317,7 +317,7 @@ class Planet2(Planet):
             for i in range(turn,-1,-1):
               ships += self.CommitTroops(i, ships, [self._reinforcing_troops, self._free_troops], self._reinforcing_troops)
               #logging.debug('there are '+repr(ships)+' left!')
-          if ships<0:
+          if ships<0 or ships==done:
             #logging.debug('increasing enemy radius')
             r_enemy+=1
         else:
@@ -343,7 +343,6 @@ class Planet2(Planet):
           r_enemy+=1
 
       while ships<=0 and r_ally<=turn:
-        done = 0
         #logging.debug('top of ally loop with r_ally='+repr(r_ally))
         for p in self._neighbors[r_ally]:
           if p.GetOwner(r_ally-1)==1:

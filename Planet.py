@@ -3,6 +3,7 @@
 class Planet:
   def __init__(self, planet_id, owner, num_ships, growth_rate, x, y):
     #logging.debug('creating a planet')
+    self._connectedness = 0
     self._planet_id = planet_id
     self._owner = []
     self._owner.append(owner)
@@ -36,7 +37,11 @@ class Planet:
     #logging.debug('done')
 
 
+  def SetConnectedness(self, con):
+    self._connectedness = con
 
+  def GetConnectedness(self):
+    return self._connectedness
 
   def SetLaunchQueue(self, launch_queue):
     self._launch_queue = launch_queue

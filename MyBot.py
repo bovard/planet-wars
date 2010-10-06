@@ -7,6 +7,7 @@
 """
 
 #import #logging
+import time
 
 from PlanetWars import PlanetWars
 from Planet2 import Planet2 as Planet
@@ -66,10 +67,11 @@ def AttackEnemies(pw):
           p.CommitRecklessTakeOver(i)
           deja_attacke.append(p.PlanetID())
           for j in range(i+1,pw.MaxDistance()):
-            troops = p.GetEnemyArrival(j)+p.GetAlliedArrival(j)
-            if troops < 0:
-              if p.CanReinforce(j):
-                p.CommitReinforce(j)
+            if p.GetEnemyArrival(j)>0 and p.GetFreeTroops(j) < 0:
+              #logging.info('defending Planet '+repr(p.PlanetID())+'on turn'+repr(i+1)+' because '+repr(p.GetEnemyArrival(i+1)) + ' > 0')
+              if p.CanDefend(j):
+                #logging.info('Planet'+repr(p.PlanetID())+' is being defended on turn '+repr(i+1))
+                p.CommitDefend(j)
   #logging.debug('done')
 
 def AttackNeutrals(pw):
@@ -81,17 +83,17 @@ def AttackNeutrals(pw):
     for p in pw.NeutralPlanets():
       if p.GrowthRate()>0:
         #logging.debug('calculating with ships '+repr(p.GetNumShips())+' growth: '+repr(p.GrowthRate())+ ' nearest: '+repr(p.NearestAlly()))
-        calc = float(p.GetNumShips())/float(p.GrowthRate())+p.NearestAlly()
+        calc = int((float(p.GetNumShips())/float(p.GrowthRate())+2*p.NearestAlly())*p.GetConnectedness())
         #logging.debug('calc = '+repr(calc))
         #logging.debug('done')
-        if calc <=pw.GetGlobalNearestEnemy():
-          #logging.debug('adding')
-          to_attack.append([calc,p])
+        
+        #logging.debug('adding')
+        to_attack.append([calc,p])
     #logging.debug('done collecting targets')
 
     #logging.debug('cycling through attacks!')
     while len(to_attack)>0:
-      min = 99999
+      min = 999999999999999999
       target = -1
       for entry in to_attack:
         if entry[0]<min:
@@ -109,17 +111,20 @@ def AttackNeutrals(pw):
           done = 0
           i = 1
           #logging.debug('Longest Distance to look is: '+repr(p.FarthestAlly()))
-          while i <= p.FarthestAlly()+1 and not(done):
-            #logging.debug('Starting CanTakeNeutral looking '+repr(i)+' units away')
-            if p.NearestAlly(i) < p.NearestEnemy(i) and p.CanTakeNeutral(i):
-              done = 1
-              p.CommitTakeNeutral(i)
-              deja_attacked.append(p)
-              for j in range(i,pw.MaxDistance()):
-                if p.GetFreeTroops(j)<0:
+          if p.FarthestAlly() < pw.MaxDistance():
+            while i <= p.FarthestAlly()+1 and not(done) and i < pw.MaxDistance():
+              #logging.debug('Starting CanTakeNeutral looking '+repr(i)+' units away')
+              if p.NearestAlly(i) < p.NearestEnemy(i) and p.CanTakeNeutral(i):
+                done = 1
+                p.CommitTakeNeutral(i)
+                deja_attacked.append(p)
+                for j in range(i,pw.MaxDistance()):
+                  if p.GetEnemyArrival(j)>0 and p.GetFreeTroops(j) < 0:
+                    #logging.info('defending Planet '+repr(p.PlanetID())+'on turn'+repr(i+1)+' because '+repr(p.GetEnemyArrival(i+1)) + ' > 0')
                     if p.CanDefend(j):
+                      #logging.info('Planet'+repr(p.PlanetID())+' is being defended on turn '+repr(i+1))
                       p.CommitDefend(j)
-            i +=1
+              i +=1
 
 
     #logging.debug('done with cycle1')
@@ -131,7 +136,7 @@ def AttackNeutrals(pw):
       if p.GrowthRate()>0 and not(p in deja_attacked):
         #logging.debug('calculating')
         #logging.debug('calculating with ships '+repr(p.GetNumShips())+' growth: '+repr(p.GrowthRate())+ ' nearest: '+repr(p.NearestAlly()))
-        calc = p.GetNumShips()/p.GrowthRate()+p.NearestAlly()
+        calc = int((float(p.GetNumShips())/float(p.GrowthRate())+2*p.NearestAlly())*p.GetConnectedness())
         #logging.debug('calc = '+repr(calc))
         #logging.debug('done')
         #logging.debug('adding')
@@ -140,7 +145,7 @@ def AttackNeutrals(pw):
 
     #logging.debug('cycling through attacks!')
     while len(to_attack)>0:
-      min = 99999
+      min = 99999999999999999999
       target = -1
       for entry in to_attack:
         if entry[0]<min:
@@ -158,17 +163,20 @@ def AttackNeutrals(pw):
           done = 0
           i = 1
           #logging.debug('Longest Distance to look is: '+repr(p.FarthestAlly()))
-          while i <= p.NearestAlly()+1 and not(done):
-            #logging.debug('Starting CanTakeNeutral looking '+repr(i)+' units away')
-            if p.NearestAlly(i) < p.NearestEnemy(i) and p.CanTakeNeutral(i) and p.CanSafeTakeNeutral(p.FarthestEnemy(i)):
-              done = 1
-              p.CommitTakeNeutral(i)
-              deja_attacked.append(p)
-              for j in range(i,pw.MaxDistance()):
-                if p.GetFreeTroops(j)<0:
+          if p.FarthestAlly() < pw.MaxDistance():
+            while i <= p.NearestAlly()+1 and not(done) and i < pw.MaxDistance():
+              #logging.debug('Starting CanTakeNeutral looking '+repr(i)+' units away')
+              if p.NearestAlly(i) < p.NearestEnemy(i) and p.CanTakeNeutral(i) and p.CanSafeTakeNeutral(p.FarthestEnemy(i)):
+                done = 1
+                p.CommitTakeNeutral(i)
+                deja_attacked.append(p)
+                for j in range(i,pw.MaxDistance()):
+                  if p.GetEnemyArrival(j)>0 and p.GetFreeTroops(j) < 0:
+                    #logging.info('defending Planet '+repr(p.PlanetID())+'on turn'+repr(i+1)+' because '+repr(p.GetEnemyArrival(i+1)) + ' > 0')
                     if p.CanDefend(j):
+                      #logging.info('Planet'+repr(p.PlanetID())+' is being defended on turn '+repr(i+1))
                       p.CommitDefend(j)
-            i +=1
+              i +=1
 
 
 '''
@@ -259,13 +267,14 @@ def LaunchAttack(pw):
           p.CommitTroops(0,int(p.GetFreeTroops()/2+p.GetReinforcingTroops()/2),[p.FreeTroops()],p.DefendingTroops())
 
 def DoTurn(pw, turn):
+  start_time = time.time()
   #logging.info('-------------------Starting the Main Loop-------------------------------')
   MainLoop(pw)
   #logging.info('-------------------Finished the Main Loop-------------------------------')
   #logging.info('-------------------Attacking Enemies------------------------------------')
   AttackEnemies(pw)
   #logging.info('-------------------Finished Attacking Enemies---------------------------')
-  if pw.GetRegenBalance() <= 0:
+  if pw.GetRegenBalance() <= 10:
     #logging.info('-------------------Attacking Neutrals-----------------------------------')
     AttackNeutrals(pw)
     #logging.info('-------------------Finished Attacking Neutrals--------------------------')
@@ -281,6 +290,7 @@ def DoTurn(pw, turn):
   #logging.info('-------------------Launching Ships--------------------------------------')
   pw.LaunchShips()
   #logging.info('-------------------Finsihed Launching Ships-----------------------------')
+  #logging.info('This turn took '+repr(time.time()-start_time))
 
 
 def main():
@@ -288,22 +298,25 @@ def main():
   turn = -1
   pw = -1
   while(True):
-    current_line = raw_input()
-    if len(current_line) >= 2 and current_line.startswith("go"):
-      turn += 1
-      if turn == 0:
-        pw = PlanetWars(map_data, turn)
+    try:
+      current_line = raw_input()
+      if len(current_line) >= 2 and current_line.startswith("go"):
+        turn += 1
+        if turn == 0:
+          pw = PlanetWars(map_data, turn)
+        else:
+          pw.Update(map_data, turn)
+        #logging.info('====================================================================')
+        #logging.info('==============Starting Turn ' + repr(turn) +'=================================')
+        DoTurn(pw, turn)
+        #logging.info('==============finished turn!========================================')
+        #logging.info('====================================================================')
+        pw.FinishTurn()
+        map_data = ''
       else:
-        pw.Update(map_data, turn)
-      #logging.info('====================================================================')
-      #logging.info('==============Starting Turn ' + repr(turn) +'=================================')
-      DoTurn(pw, turn)
-      #logging.info('==============finished turn!========================================')
-      #logging.info('====================================================================')
-      pw.FinishTurn()
-      map_data = ''
-    else:
-      map_data += current_line + '\n'
+        map_data += current_line + '\n'
+    except EOFError, e: break
+  
 
 
 if __name__ == '__main__':
