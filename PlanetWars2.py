@@ -577,3 +577,108 @@ class PlanetWars2(PlanetWars):
       logging.debug('there were no troops here or no troops were requested')
       logging.debug('leaving CommitTroops')
       return 0
+
+
+
+
+  def RecursiveNeutralHunter(self, turn, history=[], max=-9999999999999999, max_entry=[], depth=0):
+    #clone the old planets, put the old planets in the list, then set pw on the clones
+    logging.debug('in RecursiveNeutralHunter depth = '+repr(depth))
+
+    logging.debug('setting pw to the new planets')
+    logging.debug('old planets')
+    self.PrintPlanetSummary()
+    self.SetPlanets(self.PopPlanetList())
+    logging.debug('new planets')
+    self.PrintPlanetSummary()
+
+    logging.debug('history '+repr(history))
+    if len(history)>0:
+      if history[len(history)-1][0]==-1:
+        logging.debug('dead end, returning')
+        return
+
+    logging.debug('finding neutrals allies can take')
+    neutrals_allies_can_take = []
+    for planet in self.NeutralPlanets(self.MaxDistance()-1):
+      if self.CanSafeTakeNeutral(planet, turn):
+        for i in range(1, turn+1):
+          if self.CanTakeNeutral(planet, i):
+            neutrals_allies_can_take.append([planet,i])
+            break
+    logging.debug('Allies can take '+repr(len(neutrals_allies_can_take))+' planets:')
+    for entry in neutrals_allies_can_take:
+      p = entry[0]
+      logging.debug('Planet '+repr(p.PlanetID())+ ' with '+repr(p.GetNumShips())+' ships and regen of '+repr(p.GrowthRate()))
+      p.PrintSummary()
+
+
+
+    logging.debug('starting the loop')
+    for i in range(-1,len(neutrals_allies_can_take)):
+      logging.debug('i='+repr(i)+' and depth = '+repr(depth))
+      entry = [-1,-1]
+      if i>=0:
+        logging.debug('making new planets')
+        new_planets = deepcopy(self.Planets())
+        self.PrintPlanetSummary()
+        self.PushPlanetList(self.Planets)
+        self.SetPlanets(new_planets)
+        self.PrintPlanetSummary()
+        logging.debug('changed to a new set of planets')
+        entry = neutrals_allies_can_take[i]
+        logging.debug('looking at entry: '+repr(entry))
+        self.CommitTakeNeutral(entry[0], entry[1], 0)
+        entry[0].SimulateAttack(entry[1])
+
+      logging.debug('calculating neutrals enemies control')
+      neutrals_enemies_control = []
+      for planet in self.NeutralPlanets():
+        if self.CanSafeTakeNeutral(planet, turn, 1):
+          neutrals_enemies_control.append(planet)
+
+      logging.debug('calculating netural growth rates')
+      enemy_controlled_growthrate = 0
+      for p in neutrals_enemies_control:
+        enemy_controlled_growthrate += p.GrowthRate()
+
+      logging.debug('calcuulating my growthrate')
+      my_growthrate = 0
+      for p in self.MyPlanets(turn):
+        my_growthrate = p.GrowthRate()
+      if entry[0]!=-1:
+        my_growthrate += entry[0].GrowthRate()
+      for thing in history:
+        if thing[0]!=-1:
+          my_growthrate += thing[0].GrowthRate()
+
+      logging.debug('calculating score with '+repr(my_growthrate)+ ' - '+repr(enemy_controlled_growthrate))
+      score = my_growthrate - enemy_controlled_growthrate
+      logging.debug('score='+repr(score))
+
+      if score > max or (score == max and my_growthrate > max + enemy_controlled_growthrate):
+        logging.debug('found a new max!')
+        max = score
+        logging.debug('score = '+repr(max))
+        max_entry = deepcopy(history)
+        max_entry.append(entry)
+        logging.debug('max_entry = '+repr(max_entry))
+
+      if i>=0:
+        logging.debug('recursing')
+        new_history = deepcopy(history)
+        new_history.append(entry)
+        self.PushPlanetList(self.Planets())
+        RecursiveNeutralHunter(self, turn, new_history, max, max_entry, depth+1)
+
+
+        logging.debug('going back to the old planets')
+        self.PrintPlanetSummary()
+        self.SetPlanets(self.PopPlanetList())
+        self.PrintPlanetSummary()
+        logging.debug('now using '+repr(self.Planets()))
+
+
+
+    logging.debug('done')
+    return max_entry

@@ -180,107 +180,107 @@ def AttackNeutrals(pw):
               i +=1
 
 
-def RecursiveNeutralHunter(pw, turn, history=[], max=-9999999999999999, max_entry=[], depth=0):
-  #clone the old planets, put the old planets in the list, then set pw on the clones
-  logging.debug('in RecursiveNeutralHunter depth = '+repr(depth))
-
-  logging.debug('setting pw to the new planets')
-  logging.debug('old planets')
-  pw.PrintPlanetSummary()
-  pw.SetPlanets(pw.PopPlanetList())
-  logging.debug('new planets')
-  pw.PrintPlanetSummary()
-
-  logging.debug('history '+repr(history))
-  if len(history)>0:
-    if history[len(history)-1][0]==-1:
-      logging.debug('dead end, returning')
-      return
-
-  logging.debug('finding neutrals allies can take')
-  neutrals_allies_can_take = []
-  for planet in pw.NeutralPlanets(pw.MaxDistance()-1):
-    if pw.CanSafeTakeNeutral(planet, turn):
-      for i in range(1, turn+1):
-        if pw.CanTakeNeutral(planet, i):
-          neutrals_allies_can_take.append([planet,i])
-          break
-  logging.debug('Allies can take '+repr(len(neutrals_allies_can_take))+' planets:')
-  for entry in neutrals_allies_can_take:
-    p = entry[0]
-    logging.debug('Planet '+repr(p.PlanetID())+ ' with '+repr(p.GetNumShips())+' ships and regen of '+repr(p.GrowthRate()))
-    p.PrintSummary()
-
-
-
-  logging.debug('starting the loop')
-  for i in range(-1,len(neutrals_allies_can_take)):
-    logging.debug('i='+repr(i)+' and depth = '+repr(depth))
-    entry = [-1,-1]
-    if i>=0:
-      logging.debug('making new planets')
-      new_planets = deepcopy(pw.Planets())
-      pw.PrintPlanetSummary()
-      pw.PushPlanetList(pw.Planets)
-      pw.SetPlanets(new_planets)
-      pw.PrintPlanetSummary()
-      logging.debug('changed to a new set of planets')
-      entry = neutrals_allies_can_take[i]
-      logging.debug('looking at entry: '+repr(entry))
-      pw.CommitTakeNeutral(entry[0], entry[1], 0)
-      entry[0].SimulateAttack(entry[1])
-
-    logging.debug('calculating neutrals enemies control')
-    neutrals_enemies_control = []
-    for planet in pw.NeutralPlanets():
-      if pw.CanSafeTakeNeutral(planet, turn, 1):
-        neutrals_enemies_control.append(planet)
-
-    logging.debug('calculating netural growth rates')
-    enemy_controlled_growthrate = 0
-    for p in neutrals_enemies_control:
-      enemy_controlled_growthrate += p.GrowthRate()
-
-    logging.debug('calcuulating my growthrate')
-    my_growthrate = 0
-    for p in pw.MyPlanets(turn):
-      my_growthrate = p.GrowthRate()
-    if entry[0]!=-1:
-      my_growthrate += entry[0].GrowthRate()
-    for thing in history:
-      if thing[0]!=-1:
-        my_growthrate += thing[0].GrowthRate()
-
-    logging.debug('calculating score with '+repr(my_growthrate)+ ' - '+repr(enemy_controlled_growthrate))
-    score = my_growthrate - enemy_controlled_growthrate
-    logging.debug('score='+repr(score))
-
-    if score > max or (score == max and my_growthrate > max + enemy_controlled_growthrate):
-      logging.debug('found a new max!')
-      max = score
-      logging.debug('score = '+repr(max))
-      max_entry = deepcopy(history)
-      max_entry.append(entry)
-      logging.debug('max_entry = '+repr(max_entry))
-
-    if i>=0:
-      logging.debug('recursing')
-      new_history = deepcopy(history)
-      new_history.append(entry)
-      pw.PushPlanetList(pw.Planets())
-      RecursiveNeutralHunter(pw, turn, new_history, max, max_entry, depth+1)
-
-
-      logging.debug('going back to the old planets')
-      pw.PrintPlanetSummary()
-      pw.SetPlanets(pw.PopPlanetList())
-      pw.PrintPlanetSummary()
-      logging.debug('now using '+repr(pw.Planets()))
-
-  
-
-  logging.debug('done')
-  return max_entry
+#def RecursiveNeutralHunter(pw, turn, history=[], max=-9999999999999999, max_entry=[], depth=0):
+#  #clone the old planets, put the old planets in the list, then set pw on the clones
+#  logging.debug('in RecursiveNeutralHunter depth = '+repr(depth))
+#
+#  logging.debug('setting pw to the new planets')
+#  logging.debug('old planets')
+#  pw.PrintPlanetSummary()
+#  pw.SetPlanets(pw.PopPlanetList())
+#  logging.debug('new planets')
+#  pw.PrintPlanetSummary()
+#
+#  logging.debug('history '+repr(history))
+#  if len(history)>0:
+#    if history[len(history)-1][0]==-1:
+#      logging.debug('dead end, returning')
+#      return
+#
+#  logging.debug('finding neutrals allies can take')
+#  neutrals_allies_can_take = []
+#  for planet in pw.NeutralPlanets(pw.MaxDistance()-1):
+#    if pw.CanSafeTakeNeutral(planet, turn):
+#      for i in range(1, turn+1):
+#        if pw.CanTakeNeutral(planet, i):
+#          neutrals_allies_can_take.append([planet,i])
+#          break
+#  logging.debug('Allies can take '+repr(len(neutrals_allies_can_take))+' planets:')
+#  for entry in neutrals_allies_can_take:
+#    p = entry[0]
+#    logging.debug('Planet '+repr(p.PlanetID())+ ' with '+repr(p.GetNumShips())+' ships and regen of '+repr(p.GrowthRate()))
+#    p.PrintSummary()
+#
+#
+#
+#  logging.debug('starting the loop')
+#  for i in range(-1,len(neutrals_allies_can_take)):
+#    logging.debug('i='+repr(i)+' and depth = '+repr(depth))
+#    entry = [-1,-1]
+#    if i>=0:
+#      logging.debug('making new planets')
+#      new_planets = deepcopy(pw.Planets())
+#      pw.PrintPlanetSummary()
+#      pw.PushPlanetList(pw.Planets)
+#      pw.SetPlanets(new_planets)
+#      pw.PrintPlanetSummary()
+#      logging.debug('changed to a new set of planets')
+#      entry = neutrals_allies_can_take[i]
+#      logging.debug('looking at entry: '+repr(entry))
+#      pw.CommitTakeNeutral(entry[0], entry[1], 0)
+#      entry[0].SimulateAttack(entry[1])
+#
+#    logging.debug('calculating neutrals enemies control')
+#    neutrals_enemies_control = []
+#    for planet in pw.NeutralPlanets():
+#      if pw.CanSafeTakeNeutral(planet, turn, 1):
+#        neutrals_enemies_control.append(planet)
+#
+#    logging.debug('calculating netural growth rates')
+#    enemy_controlled_growthrate = 0
+#    for p in neutrals_enemies_control:
+#      enemy_controlled_growthrate += p.GrowthRate()
+#
+#    logging.debug('calcuulating my growthrate')
+#    my_growthrate = 0
+#    for p in pw.MyPlanets(turn):
+#      my_growthrate = p.GrowthRate()
+#    if entry[0]!=-1:
+#      my_growthrate += entry[0].GrowthRate()
+#    for thing in history:
+#      if thing[0]!=-1:
+#        my_growthrate += thing[0].GrowthRate()
+#
+#    logging.debug('calculating score with '+repr(my_growthrate)+ ' - '+repr(enemy_controlled_growthrate))
+#    score = my_growthrate - enemy_controlled_growthrate
+#    logging.debug('score='+repr(score))
+#
+#    if score > max or (score == max and my_growthrate > max + enemy_controlled_growthrate):
+#      logging.debug('found a new max!')
+#      max = score
+#      logging.debug('score = '+repr(max))
+#      max_entry = deepcopy(history)
+#      max_entry.append(entry)
+#      logging.debug('max_entry = '+repr(max_entry))
+#
+#    if i>=0:
+#      logging.debug('recursing')
+#      new_history = deepcopy(history)
+#      new_history.append(entry)
+#      pw.PushPlanetList(pw.Planets())
+#      RecursiveNeutralHunter(pw, turn, new_history, max, max_entry, depth+1)
+#
+#
+#      logging.debug('going back to the old planets')
+#      pw.PrintPlanetSummary()
+#      pw.SetPlanets(pw.PopPlanetList())
+#      pw.PrintPlanetSummary()
+#      logging.debug('now using '+repr(pw.Planets()))
+#
+#
+#
+#  logging.debug('done')
+#  return max_entry
 
 
 
@@ -330,7 +330,7 @@ def DoTurn(pw, turn):
   logging.info('-------------------Finished Attacking Enemies---------------------------')
   if pw.GetRegenBalance() <= 10:
     logging.info('-------------------Activating Neutral Hunter----------------------------')
-    to_attack = RecursiveNeutralHunter(pw, int(pw.MaxDistance()/2) )
+    to_attack = pw.RecursiveNeutralHunter(int(pw.MaxDistance()/2) )
     logging.warning('Neutral Hunter said to attack '+repr(to_attack))
     for entry in to_attack:
       if entry[0]!=-1:
