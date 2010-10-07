@@ -12,7 +12,6 @@ class Planet:
     self._growth_rate = growth_rate
     self._x = x
     self._y = y
-    self._neighbors = {}
     self._allied_arrivals = []
     self._enemy_arrivals = []
     # free troops are those that haven't been used for anything yet
@@ -73,16 +72,6 @@ class Planet:
     self._allied_arrivals.append(0)
 
 
-  def IsOutsideAlliedCloud(self, max):
-    #logging.debug('in IsOnTheFront')
-    is_outside = 1
-    for i in range(0, self._nearest_enemy[0]):
-      for p in self._neighbors[i]:
-        if p.NearestEnemy()<self._nearest_enemy[0]:
-          is_outside = 0
-
-    return is_outside
-
 
 
   # this should be called before every turn starts
@@ -129,24 +118,19 @@ class Planet:
       self._free_troops.append(0)
     #logging.debug('done')
 
-  #called after CalCOwnerAndNumShips
-  def CalcNeighbors(self, turn, max):
-    near_enemy =999999999999
-    near_ally =99999999999
-    far_enemy =0
-    far_ally =0
-    for i in range(1,max+1):
-      for p in self._neighbors[i]:
-        if p.GetOwner(turn)==2:
-          if i < near_enemy: near_enemy=i
-          if i > far_enemy: far_enemy=i
-        elif p.GetOwner(turn)==1:
-          if i < near_ally: near_ally=i
-          if i > far_ally: far_ally=i
-    self._nearest_ally.append(near_ally)
-    self._nearest_enemy.append(near_enemy)
-    self._farthest_ally.append(far_ally)
-    self._farthest_enemy.append(far_enemy)
+
+  def AddNearestAlly(self, near):
+    self._nearest_ally.append(near)
+
+  def AddNearestEnemy(self, near):
+    self._nearest_enemy.append(near)
+
+  def AddFarthestAlly(self, far):
+    self._farthest_ally.append(far)
+
+  def AddFarthestEnemy(self, far):
+    self._farthest_enemy.append(far)
+
 
 
   # this needs to be called every turn sequentailly to work
@@ -247,18 +231,8 @@ class Planet:
 
 
 
-
-
-  #called once at the beggining of the game (done)
-  def CreateNeighbor(self, max):
-    for i in range(1,max+1):
-      self._neighbors[i]=[]
-
-  def AddNeighbor(self, distance, p):
-    self._neighbors[distance].append(p)
-
-  def GetNeighbors(self, distance):
-    return self._neighbors[distance]
+  def SetFreeTroops(self, turn, troops):
+    self._free_troops[turn]==troops
 
   def PlanetID(self):
     return self._planet_id
@@ -285,6 +259,9 @@ class Planet:
 
   def AttackingTroops(self):
     return self._attacking_troops
+
+  def AlliedReinforcements(self):
+    return self._allied_reinforcements
 
   def SetNumShips(self, new_num_ships):
     #logging.debug('in SetNumShips with new_num_ships='+repr(new_num_ships))

@@ -27,6 +27,7 @@ class PlanetWars:
     self._fleets = []
     self.ParseGameState(gameState)
     self._distance = {}
+    self._neighbors = {}
     #logging.info('initializing distance')
     self._max_distance = self.InitDistance()
     self._max_regen = self.InitMaxRegen()
@@ -53,10 +54,27 @@ class PlanetWars:
 
 
   '''
+  GetSafeTabeableNeutrals searches though all the neutrals for the that are takable.
+  If test_for_enemy is not given or is 0, this will search with allies as the taker,
+  if test_for_enemy!=0 it will search as the enemy as the taker.
+  '''
+  def GetSafeTakeableNeutrals(self, turn, test_for_enemy=0):
+    can_take = []
+    for p in self.NeutralPlanets():
+      if p.CanSafeTakeNeutral(turn, test_for_enemy):
+        can_take.append(p)
+    return can_take
+
+
+
+
+  def SetPlanets(self, list_of_planets):
+    self._planets = list_of_planets
+
+  '''
   InitConnectedness should initialize the connectedness scores of all the planets
   It must be called after initialize distance
   '''
-
   def InitConnectedness(self):
     for p in self.Planets():
       con = 0
@@ -166,12 +184,16 @@ class PlanetWars:
     self._nearest_enemy=9999999
     self._farthest_enemy=-1
     for p in self._planets:
-      p.CalcNeighbors(turn, self._max_distance)
+      self._calc_neighbors(p, turn, self._max_distance)
       if p.GetOwner(turn)==1 or p.GetOwner(turn)==2:
         if p.NearestEnemy(0)<self._nearest_enemy:
           self._nearest_enemy=p.NearestEnemy(0)
         if p.FarthestEnemy(0)>self._farthest_enemy:
           self._farthest_enemy=p.FarthestEnemy(0)
+
+  def GetNeighbors(self, p, dist):
+    return self._neighbors[p.PlanetID()][dist]
+
 
   def MaxDistance(self):
     return self._max_distance
@@ -180,14 +202,17 @@ class PlanetWars:
     #logging.debug('initializing arrays')
     #create the arrays
     for p in self._planets:
-      p.CreateNeighbor(self._max_distance)
+      self._neighbors[p.PlanetID()]={}
+
     #logging.debug('done, populating arrays')
     #populate the arrays
     for p1 in self._planets:
+      for i in range(1,self.MaxDistance()+1):
+        self._neighbors[p1.PlanetID()][i]=[]
       for p2 in self._planets:
         distance = self.Distance(p1.PlanetID(),p2.PlanetID())
         if distance>0:
-          p1.AddNeighbor(distance, p2)
+          self._neighbors[p1.PlanetID()][distance].append(p2)
     #logging.debug('done')
 
   def InitArrivals(self):
