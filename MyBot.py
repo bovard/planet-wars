@@ -14,11 +14,6 @@ from PlanetWars2 import PlanetWars2 as PlanetWars
 from Planet import Planet
 import Logging as L
 
-
-
-LOG_FILENAME = 'War.log'
-if L.DEBUG or L.INFO or L.WARNING or L.ERROR or L.CRITICAL: logging.basicConfig(filename=LOG_FILENAME,level=logging.L.DEBUG, filemode='w')
-
 def MainLoop(pw):
   if L.DEBUG: logging.debug('starting the turn loop cycle ('+repr(pw.MaxDistance())+' turns)')
   for i in range(pw.MaxDistance()):
