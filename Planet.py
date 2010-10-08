@@ -1,10 +1,10 @@
 
-#import #logging
-from copy import deepcopy
+import logging
+import Logging as L
 
 class Planet:
   def __init__(self, planet_id, owner, num_ships, growth_rate, x, y):
-    #logging.debug('creating a planet')
+    if L.DEBUG: logging.debug('creating a planet')
     self._connectedness = 0
     self._planet_id = planet_id
     self._owner = []
@@ -37,7 +37,7 @@ class Planet:
     self._farthest_enemy.append(0)
     self._farthest_ally.append(0)
 
-    #logging.debug('done')
+    if L.DEBUG: logging.debug('done')
 
   def SetConnectedness(self, con):
     self._connectedness = con
@@ -66,16 +66,16 @@ class Planet:
     return self._allied_arrivals[turn]
 
   def SetAlliedArrival(self, turn, ships):
-    self._allied_arrivals[turn]+=ships
+    self._allied_arrivals[turn]=ships
 
 
   def SimulateAttack(self, turn):
-    #logging.debug('Simulating an attack on turn'+repr(turn))
+    if L.DEBUG: logging.debug('Simulating an attack on turn'+repr(turn))
     self.PrintSummary()
     for i in range(turn, len(self._owner)):
       self.CalcFreeTroops(i,1)
       self.CalcOwnerAndNumShips(i,1)
-    #logging.debug('done!')
+    if L.DEBUG: logging.debug('done!')
     self.PrintSummary()
 
   # this should be called before flights are processed (done)
@@ -124,7 +124,7 @@ class Planet:
 
   # this should be called after troop levels are set (even when creating a planet!)(done)
   def ResetFreeTroops(self):
-    #logging.debug('in ResetFreeTroops')
+    if L.DEBUG: logging.debug('in ResetFreeTroops')
     self._free_troops = []
     if self._owner[0] == 1:
       self._free_troops.append(self._num_ships[0])
@@ -132,7 +132,7 @@ class Planet:
       self._free_troops.append(-1*self._num_ships[0])
     else:
       self._free_troops.append(0)
-    #logging.debug('done')
+    if L.DEBUG: logging.debug('done')
 
 
   def AddNearestAlly(self, near):
@@ -155,7 +155,7 @@ class Planet:
     levels[self._owner[turn-1]] += self._num_ships[turn-1]
     if not(self._owner[turn-1] == 0):
       levels[self._owner[turn-1]] += self._growth_rate
-    #logging.debug('levels: '+repr(levels))
+    if L.DEBUG: logging.debug('levels: '+repr(levels))
     max = -1
     for i in levels:
       if i>max:
@@ -184,11 +184,14 @@ class Planet:
 
   # this needs to be called every turn sequentially to work, call at the begginning of the turn
   def CalcFreeTroops(self, turn, update=0):
+    if L.DEBUG: logging.debug('in CalcFreeTroops')
+    self.PrintSummary()
     levels = [0, self._allied_arrivals[turn], self._enemy_arrivals[turn]]
     if self._owner[turn-1] != 0:
       levels[self._owner[turn-1]] += self._growth_rate
     else:
       levels[0]=self._num_ships[turn-1]
+    if L.DEBUG: logging.debug('levels in CalcFreeTroops '+repr(levels))
     max1 = max(levels)
     winner = levels.index(max1)
     if levels.count(max1)>1 and max1 > 0:
@@ -217,63 +220,63 @@ class Planet:
           self._free_troops.append(0)
         else:
           self._free_troops[turn]=0
-    #logging.debug('leaving, free troops: ' + repr(self._free_troops))
+    if L.DEBUG: logging.debug('leaving, free troops: ' + repr(self._free_troops))
 
 
   def GetFreeTroops(self, start_turn=0, end_turn=-1):
-    #logging.debug('in GetFreeTroops ' + repr(self._free_troops)+ ' turn='+repr(start_turn))
+    if L.DEBUG: logging.debug('in GetFreeTroops ' + repr(self._free_troops)+ ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._free_troops[start_turn]
     else:
       return sum(self._free_troops[start_turn:end_turn+1])
 
   def GetDefendingTroops(self, start_turn=0, end_turn=-1):
-    #logging.debug('in GetDefendingTroops ' + repr(self._defending_troops)+ ' turn='+repr(start_turn))
+    if L.DEBUG: logging.debug('in GetDefendingTroops ' + repr(self._defending_troops)+ ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._defending_troops[start_turn]
     else:
       return sum(self._defending_troops[start_turn:end_turn+1])
 
   def GetReinforcingTroops(self, start_turn=0, end_turn=-1):
-    #logging.debug('in GetReinforcingTroops ' + repr(self._reinforcing_troops) + ' turn='+repr(start_turn))
+    if L.DEBUG: logging.debug('in GetReinforcingTroops ' + repr(self._reinforcing_troops) + ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._reinforcing_troops[start_turn]
     else:
       return sum(self._reinforcing_troops[start_turn:end_turn+1])
 
   def GetForcastingTroops(self, start_turn=0, end_turn=-1):
-    #logging.debug('in GetForcastingTroops ' + repr(self._forcasting_troops) + ' turn='+repr(start_turn))
+    if L.DEBUG: logging.debug('in GetForcastingTroops ' + repr(self._forcasting_troops) + ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._forcasting_troops[start_turn]
     else:
       return sum(self._forcasting_troops[start_turn:end_turn+1])
 
   def GetAlliedReinforcements(self, start_turn=0, end_turn=-1):
-    #logging.debug('in GetAlliedReinforcements ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
+    if L.DEBUG: logging.debug('in GetAlliedReinforcements ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._allied_reinforcements[start_turn]
     else:
       return sum(self._allied_reinforcements[start_turn:end_turn+1])
 
   def GetAttackingTroops(self, start_turn=0, end_turn=-1):
-    #logging.debug('in GetAttackingTroops ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
+    if L.DEBUG: logging.debug('in GetAttackingTroops ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._attacking_troops[start_turn]
     else:
       return sum(self._attacking_troops[start_turn:end_turn+1])
 
   def GetAllTroops(self, start_turn=0, end_turn=-1):
-    #logging.debug('in GetAllTroops')
+    if L.DEBUG: logging.debug('in GetAllTroops')
     return self.GetFreeTroops(start_turn, end_turn) + self.GetDefendingTroops(start_turn, end_turn) \
       + self.GetReinforcingTroops(start_turn, end_turn) + self.GetAttackingTroops(start_turn, end_turn) \
       + self.GetForcastingTroops(start_turn, end_turn)
 
 
   def SetFreeTroops(self, turn, troops):
-    #logging.debug('in SetFreeTroops')
-    #logging.debug(repr(self._free_troops))
+    if L.DEBUG: logging.debug('in SetFreeTroops')
+    if L.DEBUG: logging.debug(repr(self._free_troops))
     self._free_troops[turn]=troops
-    #logging.debug(repr(self._free_troops))
+    if L.DEBUG: logging.debug(repr(self._free_troops))
 
   def PlanetID(self):
     return self._planet_id
@@ -286,7 +289,7 @@ class Planet:
     return self._owner[turn]
 
   def GetNumShips(self, turn=0):
-    #logging.debug('in GetNumShips with turn='+repr(turn))
+    if L.DEBUG: logging.debug('in GetNumShips with turn='+repr(turn))
     return self._num_ships[turn]
 
   def FreeTroops(self):
@@ -308,9 +311,9 @@ class Planet:
     return self._allied_reinforcements
 
   def SetNumShips(self, new_num_ships):
-    #logging.debug('in SetNumShips with new_num_ships='+repr(new_num_ships))
+    if L.DEBUG: logging.debug('in SetNumShips with new_num_ships='+repr(new_num_ships))
     self._num_ships = []
-    #logging.debug('adding some new ships'+repr(new_num_ships))
+    if L.DEBUG: logging.debug('adding some new ships'+repr(new_num_ships))
     self._num_ships.append(new_num_ships)
 
   def GrowthRate(self):
@@ -330,31 +333,35 @@ class Planet:
 
   def PrintSummary(self, info=0):
     if not(info):
-      #logging.debug('________________________________________________________________')
-      #logging.debug('Planet '+repr(self._planet_id)+' with '+repr(self._num_ships[0])+' and regen '+repr(self._growth_rate))
-      #logging.debug('With nearest '+repr(self._nearest_ally[0])+','+repr(self._nearest_enemy[0]))
-      #logging.debug('and furthest '+repr(self._farthest_ally[0])+','+repr(self._farthest_enemy[0]))
-      #logging.debug('Owner List      - '+repr(self._owner))
-      #logging.debug('Num Ships List  - '+repr(self._num_ships))
-      #logging.debug('FreeTroops List - '+repr(self._free_troops))
-      #logging.debug('Reinforcing List- '+repr(self._reinforcing_troops))
-      #logging.debug('Forcasing List  - '+repr(self._forcasting_troops))
-      #logging.debug('Defending List  - '+repr(self._defending_troops))
-      #logging.debug('Attacking List  - '+repr(self._attacking_troops))
-      #logging.debug('Allied Reinforce- '+repr(self._allied_reinforcements))
-      #logging.debug('________________________________________________________________')
+      if L.DEBUG: logging.debug('________________________________________________________________')
+      if L.DEBUG: logging.debug('Planet '+repr(self._planet_id)+' with '+repr(self._num_ships[0])+' and regen '+repr(self._growth_rate))
+      if L.DEBUG: logging.debug('With nearest '+repr(self._nearest_ally[0])+','+repr(self._nearest_enemy[0]))
+      if L.DEBUG: logging.debug('and furthest '+repr(self._farthest_ally[0])+','+repr(self._farthest_enemy[0]))
+      if L.DEBUG: logging.debug('Allied Arrivals - '+repr(self._allied_arrivals))
+      if L.DEBUG: logging.debug('Enemy Arrivals  - '+repr(self._enemy_arrivals))
+      if L.DEBUG: logging.debug('Owner List      - '+repr(self._owner))
+      if L.DEBUG: logging.debug('Num Ships List  - '+repr(self._num_ships))
+      if L.DEBUG: logging.debug('FreeTroops List - '+repr(self._free_troops))
+      if L.DEBUG: logging.debug('Reinforcing List- '+repr(self._reinforcing_troops))
+      if L.DEBUG: logging.debug('Forcasing List  - '+repr(self._forcasting_troops))
+      if L.DEBUG: logging.debug('Defending List  - '+repr(self._defending_troops))
+      if L.DEBUG: logging.debug('Attacking List  - '+repr(self._attacking_troops))
+      if L.DEBUG: logging.debug('Allied Reinforce- '+repr(self._allied_reinforcements))
+      if L.DEBUG: logging.debug('________________________________________________________________')
       return 0
     else:
-      #logging.info('________________________________________________________________')
-      #logging.info('Planet '+repr(self._planet_id)+' with '+repr(self._num_ships[0]))
-      #logging.info('With nearest '+repr(self._nearest_ally[0])+','+repr(self._nearest_enemy[0]))
-      #logging.info('and furthest '+repr(self._farthest_ally[0])+','+repr(self._farthest_enemy[0]))
-      #logging.info('Owner List      - '+repr(self._owner))
-      #logging.info('FreeTroops List - '+repr(self._free_troops))
-      #logging.info('Reinforcing List- '+repr(self._reinforcing_troops))
-      #logging.info('Forcasing List  - '+repr(self._forcasting_troops))
-      #logging.info('Defending List  - '+repr(self._defending_troops))
-      #logging.info('Attacking List  - '+repr(self._attacking_troops))
-      #logging.info('Allied Reinforce- '+repr(self._allied_reinforcements))
-      #logging.info('________________________________________________________________')
+      if L.INFO: logging.info('________________________________________________________________')
+      if L.INFO: logging.info('Planet '+repr(self._planet_id)+' with '+repr(self._num_ships[0]))
+      if L.INFO: logging.info('With nearest '+repr(self._nearest_ally[0])+','+repr(self._nearest_enemy[0]))
+      if L.INFO: logging.info('and furthest '+repr(self._farthest_ally[0])+','+repr(self._farthest_enemy[0]))
+      if L.INFO: logging.info('Allied Arrivals - '+repr(self._allied_arrivals))
+      if L.INFO: logging.info('Enemy Arrivals  - '+repr(self._enemy_arrivals))
+      if L.INFO: logging.info('Owner List      - '+repr(self._owner))
+      if L.INFO: logging.info('FreeTroops List - '+repr(self._free_troops))
+      if L.INFO: logging.info('Reinforcing List- '+repr(self._reinforcing_troops))
+      if L.INFO: logging.info('Forcasing List  - '+repr(self._forcasting_troops))
+      if L.INFO: logging.info('Defending List  - '+repr(self._defending_troops))
+      if L.INFO: logging.info('Attacking List  - '+repr(self._attacking_troops))
+      if L.INFO: logging.info('Allied Reinforce- '+repr(self._allied_reinforcements))
+      if L.INFO: logging.info('________________________________________________________________')
       return 0

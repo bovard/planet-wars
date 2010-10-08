@@ -7,12 +7,8 @@ from Fleet import Fleet
 from Planet import Planet
 
 
-#import #logging
-#LOG_FILENAME = 'War.log'
-#logging.basicConfig(filename=LOG_FILENAME,level=#logging.DEBUG, filemode='w')
-
-
-
+import logging
+import Logging as L
 
 
 
@@ -21,42 +17,42 @@ class PlanetWars:
   def __init__(self, gameState, turn):
     self._nearest_enemy=9999999
     self._farthest_enemy=-1
-    #logging.info('Initializing Planet Wars')
-    #logging.info('Turn number '+repr(turn))
+    if L.INFO: logging.info('Initializing Planet Wars')
+    if L.INFO: logging.info('Turn number '+repr(turn))
     self._planets = []
     self._fleets = []
     self._planet_ids = []
     self.ParseGameState(gameState)
     self._distance = {}
     self._neighbors = {}
-    #logging.info('initializing distance')
+    if L.INFO: logging.info('initializing distance')
     self._max_distance = self.InitDistance()
     self._max_regen = self.InitMaxRegen()
     self.InitConnectedness()
-    #logging.info('done with distances')
-    #logging.info('initialiaing and calculatings neighbors')
+    if L.INFO: logging.info('done with distances')
+    if L.INFO: logging.info('initialiaing and calculatings neighbors')
     self.InitNeighbors()
-    #logging.info('initializing arrivals')
+    if L.INFO: logging.info('initializing arrivals')
     self.InitArrivals()
-    #logging.info('done with arrivals')
-    #logging.info('adding new fleets')
+    if L.INFO: logging.info('done with arrivals')
+    if L.INFO: logging.info('adding new fleets')
     self.AddNewFlights()
-    #logging.info('done with new flights')
-    #logging.info('setting reinforcements')
+    if L.INFO: logging.info('done with new flights')
+    if L.INFO: logging.info('setting reinforcements')
     self.ResetReinforcements()
-    #logging.info('done setting reinforcements')
-    #logging.info('setting nearest/farthest neighbors')
+    if L.INFO: logging.info('done setting reinforcements')
+    if L.INFO: logging.info('setting nearest/farthest neighbors')
     self.ResetNeighbors()
-    #logging.info('done setting neighbors')
-    #logging.info('setting launch queue')
+    if L.INFO: logging.info('done setting neighbors')
+    if L.INFO: logging.info('setting launch queue')
     self._launch_queue = -1
     self.InitializeLaunchQueue()
-    #logging.debug(repr(self._launch_queue))
-    #logging.info('done setting launch queue')
-    #logging.info('initilizing planet_list_list')
+    if L.DEBUG: logging.debug(repr(self._launch_queue))
+    if L.INFO: logging.info('done setting launch queue')
+    if L.INFO: logging.info('initilizing planet_list_list')
     self._planet_list_list = []
-    #logging.info('done')
-    #logging.info('done with initialization')
+    if L.INFO: logging.info('done')
+    if L.INFO: logging.info('done with initialization')
 
   def PushPlanetList(self, list_of_planets):
     self._planet_list_list.append(list_of_planets)
@@ -84,10 +80,10 @@ class PlanetWars:
     return new_planets
 
   def PrintPlanetSummary(self):
-    #logging.debug('Printing Planet Summary!')
+    if L.DEBUG: logging.debug('Printing Planet Summary!')
     for p in self._planets:
       p.PrintSummary()
-    #logging.debug('DONE')
+    if L.DEBUG: logging.debug('DONE')
 
 
   def SetPlanets(self, list_of_planets):
@@ -106,13 +102,13 @@ class PlanetWars:
 
 
   def InitializeLaunchQueue(self):
-    #logging.debug('initializing launch queue')
+    if L.DEBUG: logging.debug('initializing launch queue')
     self._launch_queue = {}
     for p in self.Planets():
       self._launch_queue[p.PlanetID()]={}
       for o in self.Planets():
         self._launch_queue[p.PlanetID()][o.PlanetID()]=0
-    #logging.debug('initialezed launch queue!')
+    if L.DEBUG: logging.debug('initialezed launch queue!')
 
     
 
@@ -126,38 +122,38 @@ class PlanetWars:
     if int(ships)>0:
       self._launch_queue[p_id_source][p_id_dest]+=int(ships)
     else:
-      #logging.warning('Tried to send a non-positive amount of troops!')
+      if L.WARNING: logging.warning('Tried to send a non-positive amount of troops!')
       return -1
 
   def LaunchShips(self):
     #launch troops!
-    #logging.debug('lauching ships!')
-    #logging.debug(repr(self._launch_queue))
+    if L.DEBUG: logging.debug('lauching ships!')
+    if L.DEBUG: logging.debug(repr(self._launch_queue))
     for p in self.MyPlanets():
       to_send = 0
       for o in self.Planets():
         to_send = self._launch_queue[p.PlanetID()][o.PlanetID()]
         if to_send>0:
-          #logging.info('Sending a fleet of ' + repr(to_send)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
-          #logging.info('Planet'+repr(p.PlanetID())+'- regen: '+repr(p.GrowthRate()) + '- troops: '+repr(p.GetNumShips()))
-          #logging.info('Planet'+repr(o.PlanetID())+'- regen: '+repr(o.GrowthRate()) + '- troops: '+repr(o.GetNumShips()))
-          #logging.info('balls?')
+          if L.INFO: logging.info('Sending a fleet of ' + repr(to_send)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
+          if L.INFO: logging.info('Planet'+repr(p.PlanetID())+'- regen: '+repr(p.GrowthRate()) + '- troops: '+repr(p.GetNumShips()))
+          if L.INFO: logging.info('Planet'+repr(o.PlanetID())+'- regen: '+repr(o.GrowthRate()) + '- troops: '+repr(o.GetNumShips()))
+          if L.INFO: logging.info('balls?')
           availiable = p.GetNumShips()
           if availiable >= to_send:
             p.SetNumShips(availiable-to_send)
             self.IssueOrder(p.PlanetID(),o.PlanetID(),to_send)
           elif availiable > 0:
-            #logging.critical('BAD TROOP TRANSPORT')
-            #logging.critical('Tried to send '+repr(to_send)+' but had '+repr(availiable))
+            if L.CRITICAL: logging.critical('BAD TROOP TRANSPORT')
+            if L.CRITICAL: logging.critical('Tried to send '+repr(to_send)+' but had '+repr(availiable))
             p.SetNumShips(0)
             self.IssueOrder(p.PlanetID(),o.PlanetID(),availiable)
           else:
-            #logging.critical('somehow we have a negative amount on one of the planets.... oops?')
-            #logging.critical('BAD TROOP TRANSPORT')
+            if L.CRITICAL: logging.critical('somehow we have a negative amount on one of the planets.... oops?')
+            if L.CRITICAL: logging.critical('BAD TROOP TRANSPORT')
             continue
         elif to_send<0:
-          #logging.critical('NEGATIVE AMOUNT TO SEND')
-          #logging.critical('Sending a fleet of ' + repr(to_send)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
+          if L.CRITICAL: logging.critical('NEGATIVE AMOUNT TO SEND')
+          if L.CRITICAL: logging.critical('Sending a fleet of ' + repr(to_send)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
           continue
 
   def InitMaxRegen(self):
@@ -226,13 +222,13 @@ class PlanetWars:
     return self._max_distance
 
   def InitNeighbors(self):
-    #logging.debug('initializing arrays')
+    if L.DEBUG: logging.debug('initializing arrays')
     #create the arrays
     for p in self._planets:
       self._neighbors[p.PlanetID()]={}
-    #logging.debug('done '+repr(self._neighbors))
+    if L.DEBUG: logging.debug('done '+repr(self._neighbors))
 
-    #logging.debug('done, populating arrays')
+    if L.DEBUG: logging.debug('done, populating arrays')
     #populate the arrays
     for p1 in self._planets:
       for i in range(1,self.MaxDistance()+1):
@@ -241,65 +237,65 @@ class PlanetWars:
         distance = self.Distance(p1.PlanetID(),p2.PlanetID())
         if distance>0:
           self._neighbors[p1.PlanetID()][distance].append(p2.PlanetID())
-    #logging.debug('done')
+    if L.DEBUG: logging.debug('done')
 
   def InitArrivals(self):
-    #logging.debug('initializing arrays')
+    if L.DEBUG: logging.debug('initializing arrays')
     for p in self._planets:
       p.InitArrivals(self._max_distance)
-    #logging.debug('done')
+    if L.DEBUG: logging.debug('done')
 
 
   def AddNewFlights(self):
-    #logging.debug('in AddNewFlights')
+    if L.DEBUG: logging.debug('in AddNewFlights')
     for f in self._fleets:
-      #logging.debug('testing for new flights')
-      #logging.debug(repr(f.TurnsRemaining()+1)+'=?'+repr(f.TotalTripLength()))
+      if L.DEBUG: logging.debug('testing for new flights')
+      if L.DEBUG: logging.debug(repr(f.TurnsRemaining()+1)+'=?'+repr(f.TotalTripLength()))
       if f.TurnsRemaining()+1==f.TotalTripLength():
-        #logging.debug('testing for owner')
+        if L.DEBUG: logging.debug('testing for owner')
         if f.Owner() ==1:
-          #logging.debug('my fleet')
+          if L.DEBUG: logging.debug('my fleet')
           self.GetPlanet(f.DestinationPlanet()).AddAlliedArrival(f.TurnsRemaining(), f.NumShips())
         elif f.Owner() ==2:
-          #logging.debug('enemy fleet')
+          if L.DEBUG: logging.debug('enemy fleet')
           self.GetPlanet(f.DestinationPlanet()).AddEnemyArrival(f.TurnsRemaining(), f.NumShips())
-    #logging.debug('leaving AddNewFlights')
+    if L.DEBUG: logging.debug('leaving AddNewFlights')
 
   def Update(self, gameState, turn):
-    #logging.info('Updating map information for turn '+repr(turn))
-    #logging.debug('updating old flight information')
+    if L.INFO: logging.info('Updating map information for turn '+repr(turn))
+    if L.DEBUG: logging.debug('updating old flight information')
     to_remove = []
     for f in self._fleets:
-      #logging.debug('updating a flight')
+      if L.DEBUG: logging.debug('updating a flight')
       in_flight = f.Update()
-      #logging.debug(repr(in_flight) + ' turns left for this flight')
+      if L.DEBUG: logging.debug(repr(in_flight) + ' turns left for this flight')
       if not(in_flight):
         to_remove.append(f)
-      #logging.debug('updated a flight!')
+      if L.DEBUG: logging.debug('updated a flight!')
     for f in to_remove:
       self._fleets.remove(f)
-      #logging.debug('removed flight ' + repr(f))
-    #logging.debug('updated!')
-    #logging.debug('updating the arrival queues')
+      if L.DEBUG: logging.debug('removed flight ' + repr(f))
+    if L.DEBUG: logging.debug('updated!')
+    if L.DEBUG: logging.debug('updating the arrival queues')
     for p in self._planets:
       p.Update()
-    #logging.debug('done')
+    if L.DEBUG: logging.debug('done')
     self.ParseGameState(gameState, 1)
-    #logging.debug('there are ' + repr(len(self._planets)) + ' and ' + repr(len(self._fleets)) + ' fleets')
-    #logging.debug('adding new flights')
+    if L.DEBUG: logging.debug('there are ' + repr(len(self._planets)) + ' and ' + repr(len(self._fleets)) + ' fleets')
+    if L.DEBUG: logging.debug('adding new flights')
     self.AddNewFlights()
-    #logging.debug('done')
-    #logging.info('setting reinforcements')
+    if L.DEBUG: logging.debug('done')
+    if L.INFO: logging.info('setting reinforcements')
     self.ResetReinforcements()
-    #logging.info('done setting reinforcements')
-    #logging.info('resetting nearest/farthest neighbors')
+    if L.INFO: logging.info('done setting reinforcements')
+    if L.INFO: logging.info('resetting nearest/farthest neighbors')
     self.ResetNeighbors()
-    #logging.info('done resetting neighbors')
-    #logging.info('setting launch queue')
+    if L.INFO: logging.info('done resetting neighbors')
+    if L.INFO: logging.info('setting launch queue')
     self._launch_queue = []
     self.InitializeLaunchQueue()
-    #logging.info('done setting launch queue')
-    #logging.info('sucessfully updated!')
+    if L.INFO: logging.info('done setting launch queue')
+    if L.INFO: logging.info('sucessfully updated!')
 
 
   def InitDistance(self):
@@ -321,7 +317,7 @@ class PlanetWars:
           self._distance[p_id][o_id]=0
         else:
           self._distance[o_id][p_id] = self._distance[p_id][o_id]
-    #logging.debug('done. max is '+repr(max))
+    if L.DEBUG: logging.debug('done. max is '+repr(max))
     return max
 
   def Distance(self, source, dest):
@@ -413,7 +409,7 @@ class PlanetWars:
     return int(ceil(sqrt(dx * dx + dy * dy)))
 
   def IssueOrder(self, source_planet, destination_planet, num_ships):
-    #logging.info("%d %d %d\n" % (source_planet, destination_planet, num_ships))
+    if L.INFO: logging.info("%d %d %d\n" % (source_planet, destination_planet, num_ships))
     stdout.write("%d %d %d\n" % \
      (source_planet, destination_planet, num_ships))
     stdout.flush()
@@ -440,17 +436,17 @@ class PlanetWars:
       if len(tokens) == 1:
         continue
       if tokens[0] == "P":
-        #logging.debug('planet token')
+        if L.DEBUG: logging.debug('planet token')
         if len(tokens) != 6:
           return 0
         if(update):
-          #logging.debug('updating planet '+repr(planet_id))
+          if L.DEBUG: logging.debug('updating planet '+repr(planet_id))
           p = self.GetPlanet(planet_id)
-          #logging.debug('pulled the planet')
+          if L.DEBUG: logging.debug('pulled the planet')
           p.SetOwner(int(tokens[3]))
           p.SetNumShips(int(tokens[4]))
           p.ResetFreeTroops()
-          #logging.debug('done')
+          if L.DEBUG: logging.debug('done')
         else:
           self._planet_ids.append(planet_id)
           p = Planet(planet_id, # The ID of this planet
@@ -464,16 +460,16 @@ class PlanetWars:
         planet_id += 1
 
       elif tokens[0] == "F":
-        #logging.debug('flight token')
+        if L.DEBUG: logging.debug('flight token')
         flights += 1
         if len(tokens) != 7:
           return 0
         else:
-          #logging.debug('testing to add a valid flight')
-          #logging.debug('update='+repr(update))
-          #logging.debug(tokens[6] + '+1=?' + tokens[5])
+          if L.DEBUG: logging.debug('testing to add a valid flight')
+          if L.DEBUG: logging.debug('update='+repr(update))
+          if L.DEBUG: logging.debug(tokens[6] + '+1=?' + tokens[5])
           if not(update) or int(tokens[6])+1==int(tokens[5]):
-            #logging.debug('adding a flight')
+            if L.DEBUG: logging.debug('adding a flight')
             f = Fleet(int(tokens[1]), # Owner
                   int(tokens[2]), # Num ships
                   int(tokens[3]), # Source
@@ -481,12 +477,12 @@ class PlanetWars:
                   int(tokens[5]), # Total trip length
                   int(tokens[6])) # Turns remaining
             self._fleets.append(f)
-            #logging.debug('done')
+            if L.DEBUG: logging.debug('done')
       else:
         return 0
     if not(flights==len(self._fleets)):
-      #logging.critical("FLIGHT MISMANAGEDMENT!")
-      #logging.critical('processed: '+repr(flights)+' but only have '+repr(len(self._fleets)))
+      if L.CRITICAL: logging.critical("FLIGHT MISMANAGEDMENT!")
+      if L.CRITICAL: logging.critical('processed: '+repr(flights)+' but only have '+repr(len(self._fleets)))
       return -1
     return 1
 

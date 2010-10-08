@@ -1,3 +1,6 @@
+
+import Logging as L
+
 class Ant:
   def __init__(self, start_p_id, end_p_id):
     self._start_p_id = start_p_id

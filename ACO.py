@@ -1,3 +1,4 @@
+import Logging as L
 import logging
 import random
 
@@ -17,27 +18,27 @@ class ACO:
   Creates a pheremone matrix that covers all of the planets
   '''
   def _create_pheremone_matrix(self):
-    logging.debug('creating the pheremone matrix')
+    if L.DEBUG: logging.debug('creating the pheremone matrix')
     matrix = {}
     for p_id in self._planet_ids:
       matrix[p_id]={}
       for o_id in self._planet_ids:
         matrix[p_id][o_id]=0
     return matrix
-    logging.debug('done')
+    if L.DEBUG: logging.debug('done')
 
   '''
   Initializes ants going in-between only the given planet_ids
   '''
   def _initialize_ants(self, planet_ids):
-    logging.debug('creating ants')
+    if L.DEBUG: logging.debug('creating ants')
     self._ants = []
     for p_id in planet_ids:
       matrix[p_id]={}
       for o_id in planet_ids:
         new_ant = Ant(p_id, o_id)
         self._ants.append(new_ant)
-    logging.debug('done')
+    if L.DEBUG: logging.debug('done')
 
 
   '''
@@ -48,12 +49,12 @@ class ACO:
   '''
   def _move(self, planet_ids):
     done = 1
-    logging.debug('starting a move action')
+    if L.DEBUG: logging.debug('starting a move action')
     for ant in self._ants:
-      logging.debug('getting an ant')
+      if L.DEBUG: logging.debug('getting an ant')
       if not(ant.IsDone()):
         done = 0
-        logging.debug('ant not at destination, continueing')
+        if L.DEBUG: logging.debug('ant not at destination, continueing')
         move_options = []
         current_p_id = ant.GetCurrentPlanet()
         end_p_id = ant.GetEndPlant()
@@ -61,23 +62,23 @@ class ACO:
         max_distance = self._distances[current_p_id][end_p_id]
 
         #Find all possible moves
-        logging.debug('finding possible moves')
+        if L.DEBUG: logging.debug('finding possible moves')
         for i in range(1, max_distance+1):
           for p in self._neighbors[current_p_id][i]:
             if not(p in history) and p in planet_ids:
               move_options.append([current_p_id,p])
 
-        logging.debug('adding up total scent')
+        if L.DEBUG: logging.debug('adding up total scent')
         #Figure out the total pheremon, add self._random_factor to each
         total = 0
         for entry in move_options:
           total += self._random_factor + self._pheremone_matrix[entry[0]][entry[1]]
 
-        logging.debug('selecting path')
+        if L.DEBUG: logging.debug('selecting path')
         #randomly select path to take
         to_send = random.random()*total
 
-        logging.debug('finding selection')
+        if L.DEBUG: logging.debug('finding selection')
         #find which path was chosen
         total = 0
         for entry in move_options:
