@@ -206,7 +206,7 @@ def DoTurn(pw, turn):
   if L.INFO: logging.info('-------------------Launching Ships--------------------------------------')
   pw.LaunchShips()
   if L.INFO: logging.info('-------------------Finsihed Launching Ships-----------------------------')
-  if L.INFO: logging.info('This turn took '+repr(time.time()-start_time))
+  if L.CRITICAL: logging.critical('This turn took '+repr(time.time()-start_time))
 
 
 def main():

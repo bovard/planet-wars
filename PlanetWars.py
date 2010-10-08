@@ -143,17 +143,17 @@ class PlanetWars:
             p.SetNumShips(availiable-to_send)
             self.IssueOrder(p.PlanetID(),o.PlanetID(),to_send)
           elif availiable > 0:
-            if L.CRITICAL: logging.critical('BAD TROOP TRANSPORT')
-            if L.CRITICAL: logging.critical('Tried to send '+repr(to_send)+' but had '+repr(availiable))
+            if L.ERROR: logging.error('BAD TROOP TRANSPORT')
+            if L.ERROR: logging.error('Tried to send '+repr(to_send)+' but had '+repr(availiable))
             p.SetNumShips(0)
             self.IssueOrder(p.PlanetID(),o.PlanetID(),availiable)
           else:
-            if L.CRITICAL: logging.critical('somehow we have a negative amount on one of the planets.... oops?')
-            if L.CRITICAL: logging.critical('BAD TROOP TRANSPORT')
+            if L.ERROR: logging.error('somehow we have a negative amount on one of the planets.... oops?')
+            if L.ERROR: logging.error('BAD TROOP TRANSPORT')
             continue
         elif to_send<0:
-          if L.CRITICAL: logging.critical('NEGATIVE AMOUNT TO SEND')
-          if L.CRITICAL: logging.critical('Sending a fleet of ' + repr(to_send)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
+          if L.ERROR: logging.error('NEGATIVE AMOUNT TO SEND')
+          if L.ERROR: logging.error('Sending a fleet of ' + repr(to_send)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
           continue
 
   def InitMaxRegen(self):
@@ -481,8 +481,8 @@ class PlanetWars:
       else:
         return 0
     if not(flights==len(self._fleets)):
-      if L.CRITICAL: logging.critical("FLIGHT MISMANAGEDMENT!")
-      if L.CRITICAL: logging.critical('processed: '+repr(flights)+' but only have '+repr(len(self._fleets)))
+      if L.ERROR: logging.error("FLIGHT MISMANAGEDMENT!")
+      if L.ERROR: logging.error('processed: '+repr(flights)+' but only have '+repr(len(self._fleets)))
       return -1
     return 1
 
