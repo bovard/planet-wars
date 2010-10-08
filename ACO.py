@@ -115,7 +115,7 @@ class ACO:
   The ant network had entries like [distance, path], we need to just have the next
   planet in the path, so path[1]
   '''
-  def _trim_netowrk(self, ant_network):
+  def _trim_network(self, ant_network):
     for i in len(ant_network):
       for j in len(ant_network):
         ant_network[i][j]=ant_network[i][j][1][1]
@@ -147,5 +147,7 @@ class ACO:
       self._add_pheremone(ant_network)
 
     self._trim_network(ant_network)
+
+    return ant_network
 
 

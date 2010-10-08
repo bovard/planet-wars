@@ -20,6 +20,8 @@ class Planet:
     self._free_troops = []
     # reinforcing troops are committed to respond to an enemy threat
     self._reinforcing_troops=[]
+    # forcast troops are committed to respond to long-range enemy threats
+    self._forcasting_troops = []
     # defending troops are committed to respond to an actualy enemy attack
     self._defending_troops=[]
     # ally reinforcing troops are troops that are currently committed on allied planets
@@ -36,50 +38,6 @@ class Planet:
     self._farthest_ally.append(0)
 
     #logging.debug('done')
-
-#  def Copy(self):
-#    #logging.debug('in Copy for planet '+repr(self._planet_id))
-#    new = Planet(self._planet_id, self._owner[0], self._num_ships[0], self._growth_rate, self._x, self._y)
-#    #logging.debug(repr(self._owner))
-#    owner = deepcopy(self._owner)
-#    #logging.debug(repr(owner))
-#    num_ships = deepcopy(self._num_ships)
-#    allied_arrivals = deepcopy(self._allied_arrivals)
-#    #logging.debug(repr(self._free_troops))
-#    free_troops = deepcopy(self._free_troops)
-#    #logging.debug(repr(free_troops))
-#    reinforcing_troops = deepcopy(self._reinforcing_troops)
-#    defending_troops = deepcopy(self._defending_troops)
-#    allied_reinforcements = deepcopy(self._allied_reinforcements)
-#    attacking_troops = deepcopy(self._attacking_troops)
-#    nearest_ally = deepcopy(self._nearest_ally)
-#    nearest_enemy = deepcopy(self._nearest_enemy)
-#    farthest_ally = deepcopy(self._farthest_ally)
-#    farthest_enemy = deepcopy(self._farthest_enemy)
-#    new.ReplaceArrays(owner, num_ships, allied_arrivals, deepcopy(self._free_troops), reinforcing_troops, defending_troops, allied_reinforcements, attacking_troops, nearest_ally, nearest_enemy, farthest_ally, farthest_enemy)
-#    return new
-#
-#  def ReplaceArrays(self, owner, num_ships, allied_arrivals, free_troops, reinforcing_troops, defending_troops, allied_reinforcements, attacking_troops, nearest_ally, nearest_enemy, farthest_ally, farthest_enemy):
-#    #logging.debug('Replacing Arrays')
-#    self.PrintSummary()
-#    self._owner = owner
-#    self._num_ships = num_ships
-#    self._allied_arrivals = allied_arrivals
-#    #logging.debug('replacing '+repr(self._free_troops))
-#    #logging.debug('with '+repr(free_troops))
-#    self._enemy_arrivals = free_troops
-#    self._free_troops = reinforcing_troops
-#    self._reinforcing_troops= reinforcing_troops
-#    self._defending_troops= defending_troops
-#    self._allied_reinforcements = allied_reinforcements
-#    self._attacking_troops = attacking_troops
-#    self._nearest_ally = nearest_ally
-#    self._nearest_enemy = nearest_enemy
-#    self._farthest_enemy = farthest_enemy
-#    self._farthest_ally = farthest_ally
-#    self.PrintSummary()
-
-
 
   def SetConnectedness(self, con):
     self._connectedness = con
@@ -138,11 +96,13 @@ class Planet:
     self._defending_troops=[]
     self._allied_reinforcements=[]
     self._attacking_troops = []
+    self._forcasting_troops = []
     for i in range(max+1):
       self._reinforcing_troops.append(0)
       self._defending_troops.append(0)
       self._allied_reinforcements.append(0)
       self._attacking_troops.append(0)
+      self._forcasting_troops.append(0)
 
   def ResetNeighbors(self):
     self._nearest_ally = []
@@ -265,7 +225,6 @@ class Planet:
     if end_turn == -1:
       return self._free_troops[start_turn]
     else:
-      #logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._free_troops[start_turn:end_turn+1])
 
   def GetDefendingTroops(self, start_turn=0, end_turn=-1):
@@ -273,7 +232,6 @@ class Planet:
     if end_turn == -1:
       return self._defending_troops[start_turn]
     else:
-      #logging.debug('returning a range of defending troops troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._defending_troops[start_turn:end_turn+1])
 
   def GetReinforcingTroops(self, start_turn=0, end_turn=-1):
@@ -281,16 +239,20 @@ class Planet:
     if end_turn == -1:
       return self._reinforcing_troops[start_turn]
     else:
-      #logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._reinforcing_troops[start_turn:end_turn+1])
 
+  def GetForcastingTroops(self, start_turn=0, end_turn=-1):
+    #logging.debug('in GetForcastingTroops ' + repr(self._forcasting_troops) + ' turn='+repr(start_turn))
+    if end_turn == -1:
+      return self._forcasting_troops[start_turn]
+    else:
+      return sum(self._forcasting_troops[start_turn:end_turn+1])
 
   def GetAlliedReinforcements(self, start_turn=0, end_turn=-1):
     #logging.debug('in GetAlliedReinforcements ' + repr(self._allied_reinforcements) + ' turn='+repr(start_turn))
     if end_turn == -1:
       return self._allied_reinforcements[start_turn]
     else:
-      #logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._allied_reinforcements[start_turn:end_turn+1])
 
   def GetAttackingTroops(self, start_turn=0, end_turn=-1):
@@ -298,14 +260,13 @@ class Planet:
     if end_turn == -1:
       return self._attacking_troops[start_turn]
     else:
-      #logging.debug('returning a range of troops ['+repr(start_turn)+','+repr(end_turn)+']')
       return sum(self._attacking_troops[start_turn:end_turn+1])
 
   def GetAllTroops(self, start_turn=0, end_turn=-1):
     #logging.debug('in GetAllTroops')
     return self.GetFreeTroops(start_turn, end_turn) + self.GetDefendingTroops(start_turn, end_turn) \
-      + self.GetReinforcingTroops(start_turn, end_turn) + self.GetAttackingTroops(start_turn, end_turn)
-
+      + self.GetReinforcingTroops(start_turn, end_turn) + self.GetAttackingTroops(start_turn, end_turn) \
+      + self.GetForcastingTroops(start_turn, end_turn)
 
 
   def SetFreeTroops(self, turn, troops):
@@ -333,6 +294,9 @@ class Planet:
   
   def ReinforcingTroops(self):
     return self._reinforcing_troops
+
+  def ForcastingTroops(self):
+    return self._forcasting_troops
   
   def DefendingTroops(self):
     return self._defending_troops
@@ -374,6 +338,7 @@ class Planet:
       #logging.debug('Num Ships List  - '+repr(self._num_ships))
       #logging.debug('FreeTroops List - '+repr(self._free_troops))
       #logging.debug('Reinforcing List- '+repr(self._reinforcing_troops))
+      #logging.debug('Forcasing List  - '+repr(self._forcasting_troops))
       #logging.debug('Defending List  - '+repr(self._defending_troops))
       #logging.debug('Attacking List  - '+repr(self._attacking_troops))
       #logging.debug('Allied Reinforce- '+repr(self._allied_reinforcements))
@@ -387,6 +352,7 @@ class Planet:
       #logging.info('Owner List      - '+repr(self._owner))
       #logging.info('FreeTroops List - '+repr(self._free_troops))
       #logging.info('Reinforcing List- '+repr(self._reinforcing_troops))
+      #logging.info('Forcasing List  - '+repr(self._forcasting_troops))
       #logging.info('Defending List  - '+repr(self._defending_troops))
       #logging.info('Attacking List  - '+repr(self._attacking_troops))
       #logging.info('Allied Reinforce- '+repr(self._allied_reinforcements))

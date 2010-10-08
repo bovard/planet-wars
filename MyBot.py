@@ -290,7 +290,7 @@ def Reinforce(pw):
   for p in pw.MyPlanets():
     #logging.info('starting to reinforce from planet'+repr(p.PlanetID()))
     #logging.info('sending reinforcements! of '+repr(p.GetFreeTroops())+ ' or '+repr(p.GetReinforcingTroops()))
-    if p.GetFreeTroops()>0 or p.GetReinforcingTroops()>0:
+    if p.GetReinforcingTroops()>0 or p.GetForcastingTroops()>0:
       #logging.info('have some troops to reinforce with')
       near_enemy = p.NearestEnemy()
       if near_enemy <= pw.MaxDistance():
@@ -308,8 +308,8 @@ def Reinforce(pw):
                 nearest_enemy = o.NearestEnemy(i)
         if to_send>=0:
           #logging.info('Launching reinforcements!')
-          pw.AddLaunch(p.PlanetID(),to_send,p.GetFreeTroops()+int(p.GetReinforcingTroops()/2))
-          pw.CommitTroops(p,0,p.GetFreeTroops(),[p.FreeTroops()],p.ReinforcingTroops())
+          pw.AddLaunch(p.PlanetID(),to_send,p.GetReinforcingTroops()+p.GetForcastingTroops())
+          #pw.CommitTroops(p,0,p.GetFreeTroops(),[p.FreeTroops()],p.ReinforcingTroops())
 
 
 def LaunchAttack(pw):
@@ -330,16 +330,16 @@ def DoTurn(pw, turn):
   #logging.info('-------------------Finished Attacking Enemies---------------------------')
   if 1:
     #logging.info('-------------------Activating Neutral Hunter----------------------------')
-    to_attack = pw.RecursiveNeutralHunter(int(pw.MaxDistance()/2) )
+    #to_attack = pw.RecursiveNeutralHunter(int(pw.MaxDistance()/2) )
     #logging.warning('Neutral Hunter said to attack '+repr(to_attack))
-    for entry in to_attack:
-      if entry[0]!=-1:
-        pw.CommitTakeNeutral(pw.GetPlanet(entry[0]), entry[1])
+    #for entry in to_attack:
+    #  if entry[0]!=-1:
+    #    pw.CommitTakeNeutral(pw.GetPlanet(entry[0]), entry[1])
     #logging.warning('Attacks Launched!')
     #logging.info('-------------------Leaving Neutral Hunter-------------------------------')
     
     #logging.info('-------------------Attacking Neutrals-----------------------------------')
-    #AttackNeutrals(pw)
+    AttackNeutrals(pw)
     #logging.info('-------------------Finished Attacking Neutrals--------------------------')
   #logging.info('-------------------Reinforcing------------------------------------------')
   Reinforce(pw)

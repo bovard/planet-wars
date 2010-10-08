@@ -67,10 +67,10 @@ class PlanetWars2(PlanetWars):
 
     r_ally=0
     r_enemy=1
-    done = 0
-    while (r_ally<=turn or r_enemy<=turn) and not(done):
+    done = ships+1
+    while (r_ally<=turn or r_enemy<=turn) and done!=ships:
       #logging.debug('top of main loop')
-      done = 1
+      done = ships
       while ships<0 and r_ally<=turn:
         #logging.debug('top of allied loop with r_ally='+repr(r_ally))
         if r_ally==0:
@@ -80,7 +80,7 @@ class PlanetWars2(PlanetWars):
             for i in range(turn-1,-1,-1):
               ships += self.CommitTroops(planet, i, ships, [planet.ReinforcingTroops(), planet.FreeTroops()], planet.DefendingTroops())
               #logging.debug('there are '+repr(ships)+' left!')
-          if ships<0:
+          if ships<0 or done==ships:
             #logging.debug('increasing allied radius')
             r_ally+=1
         else:
@@ -106,7 +106,6 @@ class PlanetWars2(PlanetWars):
           r_ally+=1
 
       while ships>=0 and r_enemy<=turn:
-        done = 0
         #logging.debug('top of enemy loop with r_enemy='+repr(r_enemy))
         for p in self.GetNeighbors(planet.PlanetID(), r_enemy):
           if p.GetOwner(r_enemy-1)==2:
@@ -153,7 +152,7 @@ class PlanetWars2(PlanetWars):
     #logging.debug('one cannot reinforce! (leaving CanReinforce)')
     return 0
 
-  def CommitReinforce(self, planet, turn):
+  def CommitReinforce(self, planet, turn, forcasting=0):
     ships = planet.GetAllTroops(turn)
     #logging.debug('in CommitReinforce')
     planet.PrintSummary()
@@ -162,10 +161,10 @@ class PlanetWars2(PlanetWars):
 
     r_ally=0
     r_enemy=1
-    done = 0
-    while (r_ally<=turn or r_enemy<=turn) and not(done):
+    done = ships+1
+    while (r_ally<=turn or r_enemy<=turn) and done!=ships:
       #logging.debug('top of main loop')
-      done = 1
+      done = ships
       while ships<0 and r_ally<=turn:
         #logging.debug('top of allied loop with r_ally='+repr(r_ally))
         if r_ally==0:
@@ -175,7 +174,7 @@ class PlanetWars2(PlanetWars):
             for i in range(turn,-1,-1):
               ships += self.CommitTroops(planet, i, ships, [planet.ReinforcingTroops(), planet.FreeTroops()], planet.ReinforcingTroops())
               #logging.debug('there are '+repr(ships)+' left!')
-          if ships<0:
+          if ships<0 or done==ships:
             #logging.debug('increasing allied radius')
             r_ally+=1
         else:
@@ -201,7 +200,6 @@ class PlanetWars2(PlanetWars):
           r_ally+=1
 
       while ships>=0 and r_enemy<=turn:
-        done = 0
         #logging.debug('top of enemy loop with r_enemy='+repr(r_enemy))
         for p in self.GetNeighbors(planet.PlanetID(),r_enemy):
           if p.GetOwner(r_enemy-1)==2:

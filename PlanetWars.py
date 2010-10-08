@@ -25,6 +25,7 @@ class PlanetWars:
     #logging.info('Turn number '+repr(turn))
     self._planets = []
     self._fleets = []
+    self._planet_ids = []
     self.ParseGameState(gameState)
     self._distance = {}
     self._neighbors = {}
@@ -451,6 +452,7 @@ class PlanetWars:
           p.ResetFreeTroops()
           #logging.debug('done')
         else:
+          self._planet_ids.append(planet_id)
           p = Planet(planet_id, # The ID of this planet
                    int(tokens[3]), # Owner
                    int(tokens[4]), # Num ships
