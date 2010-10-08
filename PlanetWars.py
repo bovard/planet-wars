@@ -312,16 +312,20 @@ class PlanetWars:
         self._distance[p_id][o_id]=distance
         if distance > max:
           max = distance
+    for i in range(0,len(self._planets)):
+      p_id = self._planets[i].PlanetID()
+      for j in range(i, len(self._planets)):
+        o_id = self._planets[j].PlanetID()
+        if i==j and p_id==o_id:
+          self._distance[p_id][o_id]=0
+        else:
+          self._distance[o_id][p_id] = self._distance[p_id][o_id]
     #logging.debug('done. max is '+repr(max))
     return max
 
   def Distance(self, source, dest):
-    if source < dest:
-      return self._distance[source][dest]
-    elif source == dest:
-      return 0
-    else:
-      return self._distance[dest][source]
+    return self._distance[source][dest]
+
 
   def NumPlanets(self):
     return len(self._planets)

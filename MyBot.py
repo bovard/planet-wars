@@ -328,7 +328,7 @@ def DoTurn(pw, turn):
   #logging.info('-------------------Attacking Enemies------------------------------------')
   AttackEnemies(pw)
   #logging.info('-------------------Finished Attacking Enemies---------------------------')
-  if pw.GetRegenBalance() <= 10:
+  if 1:
     #logging.info('-------------------Activating Neutral Hunter----------------------------')
     to_attack = pw.RecursiveNeutralHunter(int(pw.MaxDistance()/2) )
     #logging.warning('Neutral Hunter said to attack '+repr(to_attack))
