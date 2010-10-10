@@ -2,29 +2,62 @@ from PlanetWars import PlanetWars
 from copy import deepcopy
 import logging
 import Logging as L
+from copy import deepcopy
 
 
 class PlanetWars2(PlanetWars):
 
+  def Reinforce(self):
+    if L.INFO: logging.info('in pw Reinforce')
+    if len(self.MyPlanets(self._max_distance-1))<=1:
+      return
+    if L.INFO: logging.info('getting ant_ids')
+    p_ids = []
+    for p in self.MyPlanets(self._max_distance):
+      p_ids.append(p.PlanetID())
+    for p in self.MyPlanets():
+      if not(p.PlanetID() in p_ids):
+        p_ids.append(p.PlanetID())
+    ant_network = self._ACO.GetNetwork(p_ids)
+    if L.INFO: logging.info('done, starting loop')
+    for p in self.MyPlanets():
+      i = 1
+      while i<self.MaxDistance() and p.GetForcastDemand()<0:
+        for o in self.GetNeighbors(p.PlanetID(), i):
+          if o.GetOwner()==1:
+            forcasting = o.GetForcastingTroops(0)
+            reinforcing = o.GetReinforcingTroops(0)
+            avaliable = min(o.GetForcastDemand, forcasting+reinforcing)
+            if avaliable > 0:
+              if L.INFO: logging.info("Seding reinforcements of "+repr(avaliable)+' from '+repr(p.PlanetID())+' to '+repr(o.PlanetID()))
+              self.AddLaunch(p.PlanetID(), ant_network[p.PlanetID()][o.PlanetID()], avaliable)
+              if forcasting>avaliable:
+                o.SetForcastingTroops(0, forcasting-avaliable)
+              else:
+                o.SetForcastingTroops(0,0)
+                avaliable -= forcasting
+                if reinforcing > avaliable:
+                  o.SetReinforcingTroops(0, reinforcing - avaliable)
+                else:
+                  o.SetReinforcingTroops(0, 0)
+        i+=1
 
-  #called after CalCOwnerAndNumShips
-  def _calc_neighbors(self, planet, turn, max):
-    near_enemy =999999999999
-    near_ally =99999999999
-    far_enemy =0
-    far_ally =0
-    for i in range(1,max+1):
+
+
+
+
+  def GetControl(self, planet, turn):
+    control = 0
+    if planet.GetOwner(turn)!=2:
+      control -= 1
+      control -= planet.GetNumShips(turn)
+    for i in range(1, turn):
       for p in self.GetNeighbors(planet.PlanetID(), i):
-        if p.GetOwner(turn)==2:
-          if i < near_enemy: near_enemy=i
-          if i > far_enemy: far_enemy=i
-        elif p.GetOwner(turn)==1:
-          if i < near_ally: near_ally=i
-          if i > far_ally: far_ally=i
-    planet.AddNearestAlly(near_ally)
-    planet.AddNearestEnemy(near_enemy)
-    planet.AddFarthestAlly(far_ally)
-    planet.AddFarthestEnemy(far_enemy)
+        if planet.GetOwner(turn-i)==1:
+          control += planet.GetNumShips(turn-i)
+        elif planet.GetOwner(turn-i)==2:
+          control += planet.GetNumShips(turn-i)
+    return control
 
 
   '''
@@ -33,7 +66,7 @@ class PlanetWars2(PlanetWars):
   '''
   def CanDefend(self, planet, turn):
     if L.DEBUG: logging.debug('in CanDefend')
-    planet.PrintSummary()
+    if L.DEBUG: planet.PrintSummary()
     ships = 0
 
     #check oneself first
@@ -59,10 +92,69 @@ class PlanetWars2(PlanetWars):
   '''
   CommitDefend should be called after CanDefend returns a true result
   '''
+  def CommitSafeTakeOver(self, planet, turn):
+    ships = -1-planet.GetNumShips(turn)
+    if L.DEBUG: logging.debug('in CommitSafeTakeOver')
+    if L.DEBUG: planet.PrintSummary()
+    if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
+    #add any enemies that are too close to the planet to the reinforce request
+
+    r_ally=1
+    r_enemy=1
+    done = ships+1
+    while (r_ally<=turn or r_enemy<=turn) and done!=ships:
+      if L.DEBUG: logging.debug('top of main loop')
+      done = ships
+      while ships<0 and r_ally<=turn:
+        if L.DEBUG: logging.debug('top of allied loop with r_ally='+repr(r_ally))
+          #check allies for help
+        if L.DEBUG: logging.debug('checking allies for help')
+        for p in self.GetNeighbors(planet.PlanetID(), r_ally):
+          if p.GetOwner(r_ally-1)==1:
+            j=turn-r_ally
+            while ships<0 and j>=0:
+              if L.DEBUG: logging.debug('searching through planets j='+repr(j))
+              if L.DEBUG: logging.debug('committing free troops')
+              enforcements = self.CommitTroops(p, j, ships, [p.ForcastingTroops(), p.FreeTroops()], p.AttackingTroops())
+              ships += enforcements
+              if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
+
+              #launch defending troops in necessary
+              if r_ally==turn and j==0 and enforcements>0:
+                if L.INFO: logging.info('sending '+repr(enforcements)+' from '+repr(p.PlanetID())+' to '+repr(planet.PlanetID())+' a distance of '+repr(r_ally))
+                self.AddLaunch(p.PlanetID(),planet.PlanetID(),enforcements)
+
+              j-=1
+        if L.DEBUG: logging.debug('increasing allied radius')
+        r_ally+=1
+
+      while ships>=0 and r_enemy<=turn:
+        if L.DEBUG: logging.debug('top of enemy loop with r_enemy='+repr(r_enemy))
+        for p in self.GetNeighbors(planet.PlanetID(), r_enemy):
+          if p.GetOwner(r_enemy-1)==2:
+            ships += p.GetAllTroops(0, turn-r_enemy)
+            if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
+        if L.DEBUG: logging.debug('botton of enemy loop!')
+        if L.DEBUG: logging.debug('increasing enemy radius')
+        r_enemy+=1
+    if ships >= 0:
+      planet.SetFreeTroops(turn,ships)
+      if L.DEBUG: logging.debug('sucess! leaving CommitSafeTakeOver')
+      if L.DEBUG: planet.PrintSummary()
+      return 1
+    planet.SetFreeTroops(turn,ships)
+    if L.DEBUG: logging.debug('failed! CommitCommitSafeTakeOver')
+    if L.DEBUG: planet.PrintSummary()
+    return 0
+
+
+  '''
+  CommitDefend should be called after CanDefend returns a true result
+  '''
   def CommitDefend(self, planet, turn):
     ships = planet.GetAllTroops(turn)
     if L.DEBUG: logging.debug('in CommitDefend')
-    planet.PrintSummary()
+    if L.DEBUG: planet.PrintSummary()
     if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
     #add any enemies that are too close to the planet to the reinforce request
 
@@ -79,7 +171,7 @@ class PlanetWars2(PlanetWars):
           if planet.GetOwner(turn-1)==1:
             if L.DEBUG: logging.debug('looking for reinforcements from home planet')
             for i in range(turn-1,-1,-1):
-              ships += self.CommitTroops(planet, i, ships, [planet.ReinforcingTroops(), planet.FreeTroops()], planet.DefendingTroops())
+              ships += self.CommitTroops(planet, i, ships, [planet.ForcastingTroops(), planet.ReinforcingTroops(), planet.FreeTroops()], planet.DefendingTroops())
               if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
           if ships<0 or done==ships:
             if L.DEBUG: logging.debug('increasing allied radius')
@@ -93,7 +185,7 @@ class PlanetWars2(PlanetWars):
               while ships<0 and j>=0:
                 if L.DEBUG: logging.debug('searching through planets j='+repr(j))
                 if L.DEBUG: logging.debug('committing free troops')
-                enforcements = self.CommitTroops(p, j, ships, [p.ReinforcingTroops(), p.FreeTroops()], p.DefendingTroops())
+                enforcements = self.CommitTroops(p, j, ships, [p.ForcastingTroops(), p.FreeTroops()], p.DefendingTroops())
                 ships += enforcements
                 if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
 
@@ -118,11 +210,11 @@ class PlanetWars2(PlanetWars):
     if ships >= 0:
       planet.SetFreeTroops(turn,ships)
       if L.DEBUG: logging.debug('sucess! leaving CommitDefend')
-      planet.PrintSummary()
+      if L.DEBUG: planet.PrintSummary()
       return 1
     planet.SetFreeTroops(turn,ships)
     if L.DEBUG: logging.debug('failed! CommitDefend')
-    planet.PrintSummary()
+    if L.DEBUG: planet.PrintSummary()
     return 0
 
 
@@ -132,7 +224,7 @@ class PlanetWars2(PlanetWars):
   '''
   def CanReinforce(self, planet, turn):
     if L.DEBUG: logging.debug('in CanReinforce')
-    planet.PrintSummary()
+    if L.DEBUG: planet.PrintSummary()
     ships = 0
 
     #check oneself first
@@ -156,7 +248,7 @@ class PlanetWars2(PlanetWars):
   def CommitReinforce(self, planet, turn, forcasting=0):
     ships = planet.GetAllTroops(turn)
     if L.DEBUG: logging.debug('in CommitReinforce')
-    planet.PrintSummary()
+    if L.DEBUG: planet.PrintSummary()
     if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
     #add any enemies that are too close to the planet to the reinforce request
 
@@ -173,7 +265,11 @@ class PlanetWars2(PlanetWars):
           if planet.GetOwner(turn-1)==1:
             if L.DEBUG: logging.debug('looking for reinforcements from home planet')
             for i in range(turn,-1,-1):
-              ships += self.CommitTroops(planet, i, ships, [planet.ReinforcingTroops(), planet.FreeTroops()], planet.ReinforcingTroops())
+              if not(forcasting):
+                ships += self.CommitTroops(planet, i, ships, [planet.ReinforcingTroops(), planet.FreeTroops()], planet.ReinforcingTroops())
+              else:
+                ships += self.CommitTroops(planet, i, ships, [planet.ForcastingTroops(), deepcopy(planet.ReinforcingTroops()), planet.FreeTroops()], planet.ForcastingTroops())
+                planet.PullOutReinforcing()
               if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
           if ships<0 or done==ships:
             if L.DEBUG: logging.debug('increasing allied radius')
@@ -187,14 +283,21 @@ class PlanetWars2(PlanetWars):
               while ships<0 and j>=0:
                 if L.DEBUG: logging.debug('searching through planets j='+repr(j))
                 if L.DEBUG: logging.debug('committing free troops')
-                enforcements = self.CommitTroops(p, j, ships, [p.ReinforcingTroops(), p.FreeTroops()], p.ReinforcingTroops())
+                if not(forcasting):
+                  enforcements = self.CommitTroops(p, j, ships, [p.ReinforcingTroops(), p.FreeTroops()], p.ReinforcingTroops())
+                else:
+                  enforcements = self.CommitTroops(p, j, ships, [p.ForcastingTroops(), deepcopy(p.ReinforcingTroops()), p.FreeTroops()], p.ForcastingTroops())
+                  p.PullOutReinforcing()
                 ships += enforcements
                 if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
 
 #                #do we really want to launch these????
-#                if r_ally==turn and j==0 and enforcements>0:
-#                  if L.INFO: logging.info('sending '+repr(enforcements)+' from '+repr(p.PlanetID())+' to '+repr(self._planet_id)+' a distance of '+repr(r_ally))
-#                  self._launch_queue[p.PlanetID()][self._planet_id]+=enforcements
+                if not(forcasting):
+                  if r_ally==turn and j==0 and enforcements>0:
+                    if L.INFO: logging.info('sending '+repr(enforcements)+' from '+repr(p.PlanetID())+' to '+repr(planet.PlanetID())+' a distance of '+repr(r_ally))
+                    self._launch_queue[p.PlanetID()][planet.PlanetID()]+=enforcements
+
+
 
                 j-=1
           if L.DEBUG: logging.debug('increasing allied radius')
@@ -210,19 +313,25 @@ class PlanetWars2(PlanetWars):
         if L.DEBUG: logging.debug('increasing enemy radius')
         r_enemy+=1
     if ships >= 0:
-      planet.SetFreeTroops(turn,ships)
+      if not(forcasting):
+        planet.SetFreeTroops(turn,ships)
+      else:
+        planet.SetForcastDemand(ships)
       if L.DEBUG: logging.debug('sucess! leaving commitreinforce')
-      planet.PrintSummary()
+      if L.DEBUG: planet.PrintSummary()
       return 1
-    planet.SetFreeTroops(turn,ships)
+    if not(forcasting):
+      planet.SetFreeTroops(turn,ships)
+    else:
+      planet.SetForcastDemand(ships)
     if L.DEBUG: logging.debug('failed! CommitReinforce')
-    planet.PrintSummary()
+    if L.DEBUG: planet.PrintSummary()
     return 0
 
   def EnemyCommitReinforce(self, planet, turn):
     ships = planet.GetAllTroops(turn)
     if L.DEBUG: logging.debug('in EnemyCommitReinforce')
-    planet.PrintSummary()
+    if L.DEBUG: planet.PrintSummary()
     if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
 
     r_enemy=0
@@ -238,7 +347,7 @@ class PlanetWars2(PlanetWars):
           if planet.GetOwner(turn-1)==2:
             if L.DEBUG: logging.debug('looking for reinforcements from home planet')
             for i in range(turn,-1,-1):
-              ships += self.CommitTroops(planet, i, ships, [planet.ReinforcingTroops(), planet.FreeTroops()], planet.ReinforcingTroops())
+              ships += self.CommitTroops(planet, i, ships, [planet.ForcastingTroops(), planet.FreeTroops()], planet.ForcastingTroops())
               if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
           if ships<0 or ships==done:
             if L.DEBUG: logging.debug('increasing enemy radius')
@@ -252,7 +361,7 @@ class PlanetWars2(PlanetWars):
               while ships>0 and j>=0:
                 if L.DEBUG: logging.debug('searching through planets j='+repr(j))
                 if L.DEBUG: logging.debug('committing free troops')
-                enforcements = self.CommitTroops(p, j, ships, [p.ReinforcingTroops(), p.FreeTroops()], p.ReinforcingTroops())
+                enforcements = self.CommitTroops(p, j, ships, [p.ForcastingTroops(), p.FreeTroops()], p.ForcastingTroops())
                 ships += enforcements
                 if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
                 j-=1
@@ -271,11 +380,11 @@ class PlanetWars2(PlanetWars):
     if ships < 0:
       planet.SetFreeTroops(turn,ships)
       if L.DEBUG: logging.debug('sucess! leaving EnemyCommitReinforce')
-      planet.PrintSummary()
+      if L.DEBUG: planet.PrintSummary()
       return 1
     planet.SetFreeTroops(turn,ships)
     if L.DEBUG: logging.debug('failed! EnemyCommitReinforce')
-    planet.PrintSummary()
+    if L.DEBUG: planet.PrintSummary()
     return 0
 
 
@@ -331,7 +440,10 @@ class PlanetWars2(PlanetWars):
           if ships<0:
             ships-=planet.GrowthRate()
         for p in self.GetNeighbors(planet.PlanetID(), i):
-          ships += p.GetFreeTroops(0,turn-i)
+          if p.GetOwner(turn-i)==1:
+            ships += p.GetFreeTroops(0,turn-i)
+          else:
+            ships += p.GetFreeTroops(0,turn-i) + p.GetForcastingTroops(0, turn-i)
           if L.DEBUG: logging.debug('only '+repr(ships)+' left!')
 
       if not(test_for_enemy):
@@ -426,7 +538,7 @@ class PlanetWars2(PlanetWars):
             k = turn-j
             if p.GetOwner(k)==1:
               if L.DEBUG: logging.debug('found allied planet '+repr(p.PlanetID()))
-              reinforcement = self.CommitTroops(p, k, ships, [p.FreeTroops()], p.AttackingTroops(), planet.AlliedReinforcements())
+              reinforcement = self.CommitTroops(p, k, ships, [p.FreeTroops()], p.AttackingTroops())
               ships += reinforcement
               if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
               if i==turn and k==0 and reinforcement>0 and really:
@@ -439,7 +551,7 @@ class PlanetWars2(PlanetWars):
               if L.DEBUG: logging.debug('there are '+repr(ships)+' left!')
       if ships >= 0:
         if L.DEBUG: logging.debug('sucess! leaving CommitTakeNeutral')
-        #planet.SetAlliedArrival(turn, planet.GetNumShips(turn)+1)
+        planet.SetFreeTroops(turn, planet.GetNumShips(turn)+1)
         if L.DEBUG: logging.debug(repr(planet.FreeTroops()))
         return 1
       if L.DEBUG: logging.debug('failed! CommitTakeNeutral')
@@ -456,20 +568,17 @@ class PlanetWars2(PlanetWars):
       ships -= planet._num_ships[turn]
 
     #check oneself first
-    ships += planet.GetFreeTroops(0,turn) +planet.GetReinforcingTroops(0, turn)
-    if ships >= 0:
-      if L.DEBUG: logging.debug('leaving CanRecklessTakeOver (sucess! one CAN takeover)')
-      return 1
+    ships += planet.GetFreeTroops(0,turn) +planet.GetForcastingTroops(0, turn)
 
     #check levels on nearby planets for help
     for i in range(1,turn+1):
       if L.DEBUG: logging.debug('range of '+repr(i))
       for p in self.GetNeighbors(planet.PlanetID(), i):
         if L.DEBUG: logging.debug('looking at planet '+repr(p.PlanetID())+' with troops= '+repr(p.GetNumShips()))
-        ships += p.GetFreeTroops(0,turn-i) +p.GetReinforcingTroops(0, turn-i)
-        if ships >= 0:
-          if L.DEBUG: logging.debug('leaving CanRecklessTakeOver (sucess! one CAN takeover)')
-          return 1
+        ships += p.GetFreeTroops(0,turn-i) +p.GetForcastingTroops(0, turn-i)
+    if ships >= 0:
+      if L.DEBUG: logging.debug('leaving CanRecklessTakeOver (sucess! one CAN takeover)')
+      return 1
     if L.DEBUG: logging.debug('leaving CanRecklessTakeOver (cannot take over!)')
     return 0
 
@@ -492,17 +601,17 @@ class PlanetWars2(PlanetWars):
         if L.DEBUG: logging.debug('looking at planet '+repr(p.PlanetID())+' with troops= '+repr(p.GetNumShips()))
         for j in range(turn,i-1,-1):
           k = turn-j
-          reinforcement = self.CommitTroops(p, k, ships, [p.ReinforcingTroops(), p.FreeTroops()], p.AttackingTroops(), planet.AlliedReinforcements())
+          reinforcement = self.CommitTroops(p, k, ships, [p.FreeTroops(), p.ForcastingTroops()], p.AttackingTroops(), planet.AlliedReinforcements())
           if L.DEBUG: logging.debug('pulled '+repr(reinforcement)+' troops from the planet for turn '+repr(k))
           ships += reinforcement
           if L.DEBUG: logging.debug('only '+repr(ships)+' left!')
           if i==turn and k==0 and reinforcement>0:
             if L.DEBUG: logging.debug('sending '+repr(reinforcement)+' to Planet '+repr(planet.PlanetID()))
             self.AddLaunch(p.PlanetID(),planet.PlanetID(),reinforcement)
-          if ships >= 0:
-            planet.SetFreeTroops(turn,ships)
-            if L.DEBUG: logging.debug('leaving CommitRecklessTakeOver (sucess!)')
-            return 1
+    if ships >= 0:
+      planet.SetFreeTroops(turn,ships)
+      if L.DEBUG: logging.debug('leaving CommitRecklessTakeOver (sucess!)')
+      return 1
     planet.SetFreeTroops(turn,ships)
     if L.DEBUG: logging.debug('leaving CommitRecklessTakeOver (failure!)')
     return 0
@@ -522,7 +631,7 @@ class PlanetWars2(PlanetWars):
   '''
   def CommitTroops(self, planet, turn, ships, list_source, dest, target=-1):
     if L.DEBUG: logging.debug('in CommitTroops with turn='+repr(turn) + ' ships='+repr(ships))
-    planet.PrintSummary()
+    if L.DEBUG: planet.PrintSummary()
 
     #make sure there are some troops to reinforce with
     availiable=0
@@ -543,7 +652,7 @@ class PlanetWars2(PlanetWars):
             list[turn]=0
         dest[turn]+=committed
         if L.DEBUG: logging.debug('leaving CommitTroops after committing '+repr(committed) +' troops!')
-        planet.PrintSummary()
+        if L.DEBUG: planet.PrintSummary()
         if target!=-1:
           target[turn]=committed
         return committed
@@ -560,7 +669,7 @@ class PlanetWars2(PlanetWars):
               list[turn] += from_list
               dest[turn] += -1*ships
               if L.DEBUG: logging.debug('leaving CommitTroops after committing '+repr(-1*ships) +' troops!')
-              planet.PrintSummary()
+              if L.DEBUG: planet.PrintSummary()
               if target!=-1:
                 target[turn]=committed
               return -1*ships
@@ -569,7 +678,7 @@ class PlanetWars2(PlanetWars):
         if L.WARNING: logging.warning('L.ERROR in the logic of CommitTroops')
         dest[turn]+=committed
         if L.DEBUG: logging.debug('leaving CommitTroops after committing '+repr(committed) +' troops!')
-        planet.PrintSummary()
+        if L.DEBUG: planet.PrintSummary()
         if target!=-1:
           target[turn]=committed
         return committed

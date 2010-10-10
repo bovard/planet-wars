@@ -10,7 +10,7 @@
 import logging
 import time
 
-from PlanetWars2 import PlanetWars2 as PlanetWars
+from PlanetWars3 import PlanetWars3 as PlanetWars
 from Planet import Planet
 import Logging as L
 
@@ -34,11 +34,16 @@ def MainLoop(pw):
           if pw.CanDefend(p,i+1):
             if L.INFO: logging.info('Planet'+repr(p.PlanetID())+' is being defended on turn '+repr(i+1))
             pw.CommitDefend(p,i+1)
-        if (p.NearestEnemy()==i and p.NearestEnemy()==dist) or (p.FarthestEnemy()==i and p.FarthestEnemy()==dist):
+        if p.NearestEnemy()==i and p.NearestEnemy()==dist :
           if L.DEBUG: logging.debug('reinfrocing a planet because '+repr(p.NearestEnemy())+" == "+repr(dist))
           if pw.CanReinforce(p,i+1):
             if L.DEBUG: logging.debug('Planet'+repr(p.PlanetID())+' is being reinforced on turn '+repr(i+1))
             pw.CommitReinforce(p,i+1)
+        elif p.FarthestEnemy()==i and p.FarthestEnemy()==dist:
+          if L.DEBUG: logging.debug('forcast reinfrocing a planet because '+repr(p.NearestEnemy())+" == "+repr(dist))
+          if L.DEBUG: logging.debug('forcasting...')
+          if L.DEBUG: logging.debug('Planet'+repr(p.PlanetID())+' is being reinforced on turn '+repr(i+1))
+          pw.CommitReinforce(p,i+1, 1)
     for dist in range(1, pw.MaxDistance()+1):
       for p in pw.EnemyPlanets(i):
         if (p.NearestAlly()==i and p.NearestAlly()<=dist) or (p.FarthestAlly()==i and p.FarthestAlly()==dist):
@@ -52,7 +57,7 @@ def MainLoop(pw):
 
   if L.INFO: logging.info('i should be done')
   for p in pw.Planets():
-    p.PrintSummary(1)
+    if L.INFO: p.PrintSummary(1)
 
 
 def AttackEnemies(pw):
@@ -66,6 +71,7 @@ def AttackEnemies(pw):
         if pw.CanRecklessTakeOver(p,i):
           if L.INFO: logging.info('CAN TAKE OVER PLANET '+repr(p.PlanetID())+' ON TURN '+repr(i))
           pw.CommitRecklessTakeOver(p,i)
+          p.SimulateAttack(i)
           deja_attacke.append(p.PlanetID())
           for j in range(i+1,pw.MaxDistance()):
             if p.GetEnemyArrival(j)>0 and p.GetFreeTroops(j) < 0:
@@ -84,22 +90,25 @@ def AttackNeutrals(pw):
     for p in pw.NeutralPlanets():
       if p.GrowthRate()>0 and p.NearestAlly()<=p.NearestEnemy():
         if L.DEBUG: logging.debug('calculating with ships '+repr(p.GetNumShips())+' growth: '+repr(p.GrowthRate())+ ' nearest: '+repr(p.NearestAlly()))
-        calc = int((float(p.GetNumShips())/float(2*p.GrowthRate())))
+        calc = int((float(p.GetNumShips())/float(1.5*p.GrowthRate())))
         if L.DEBUG: logging.debug('calc = '+repr(calc))
         if L.DEBUG: logging.debug('done')
         
         if L.DEBUG: logging.debug('adding')
-        to_attack.append([calc,p])
+        to_attack.append([calc,p, p.NearestAlly()])
     if L.DEBUG: logging.debug('done collecting targets')
 
     if L.DEBUG: logging.debug('cycling through attacks!')
     while len(to_attack)>0:
       min = 999999999999999999
+      min2 = 99999999999999999
       target = -1
       for entry in to_attack:
-        if entry[0]<min:
-          min=entry[0]
-          target = entry
+        if entry[0]<=min:
+          if entry[2]<min2:
+            min=entry[0]
+            min2=entry[2]
+            target = entry
 
       if L.DEBUG: logging.debug('found target')
       to_attack.remove(target)
@@ -118,6 +127,7 @@ def AttackNeutrals(pw):
               if p.NearestAlly(i) <= p.NearestEnemy(i) and pw.CanTakeNeutral(p,i):
                 done = 1
                 pw.CommitTakeNeutral(p,i)
+                p.SimulateAttack(i)
                 deja_attacked.append(p)
                 for j in range(i,pw.MaxDistance()):
                   if p.GetEnemyArrival(j)>0 and p.GetFreeTroops(j) < 0:
@@ -187,9 +197,11 @@ def DoTurn(pw, turn):
     #if L.INFO: logging.info('-------------------Leaving Neutral Hunter-------------------------------')
     
     if L.INFO: logging.info('-------------------Attacking Neutrals-----------------------------------')
-    AttackNeutrals(pw)
+    #AttackNeutrals(pw)
+    pw.AttackNeutrals()
     if L.INFO: logging.info('-------------------Finished Attacking Neutrals--------------------------')
   if L.INFO: logging.info('-------------------Reinforcing------------------------------------------')
+  #pw.Reinforce()
   Reinforce(pw)
   if L.INFO: logging.info('-------------------Finished Reinforcing---------------------------------')
 

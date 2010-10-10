@@ -1,6 +1,7 @@
 import Logging as L
 import logging
 import random
+from Ant import Ant
 
 
 class ACO:
@@ -34,10 +35,10 @@ class ACO:
     if L.DEBUG: logging.debug('creating ants')
     self._ants = []
     for p_id in planet_ids:
-      matrix[p_id]={}
       for o_id in planet_ids:
-        new_ant = Ant(p_id, o_id)
-        self._ants.append(new_ant)
+        if p_id != o_id:
+          new_ant = Ant(p_id, o_id)
+          self._ants.append(new_ant)
     if L.DEBUG: logging.debug('done')
 
 
@@ -59,14 +60,13 @@ class ACO:
         current_p_id = ant.GetCurrentPlanet()
         end_p_id = ant.GetEndPlant()
         history = ant.GetHistory()
-        max_distance = self._distances[current_p_id][end_p_id]
 
         #Find all possible moves
         if L.DEBUG: logging.debug('finding possible moves')
-        for i in range(1, max_distance+1):
-          for p in self._neighbors[current_p_id][i]:
-            if not(p in history) and p in planet_ids:
-              move_options.append([current_p_id,p])
+        for p in planet_ids:
+          if p!=current_p_id and not(p in history):
+            move_options.append([current_p_id,p])
+
 
         if L.DEBUG: logging.debug('adding up total scent')
         #Figure out the total pheremon, add self._random_factor to each
@@ -93,22 +93,23 @@ class ACO:
   def _update_paths(self, ant_network, score_network):
     for ant in self._ants:
       result = ant.GetResult()
-      if result[0] < score_network[p.GetStartPlanet()][p.GetEndPlant()]:
-        ant_network[p.GetStartPlanet()][p.GetEndPlant()] = result[1:3]
+      if result[0] < score_network[ant.GetStartPlanet()][ant.GetEndPlant()]:
+        ant_network[ant.GetStartPlanet()][ant.GetEndPlant()] = result[1:3]
 
-  def _add_pheremone(self, ant_network):
-    for i in len(ant_network):
-      for j in len(ant_network):
-        path = ant_network[i][j][1]
-        for k in len(path-1):
-          self._pheremone_matrix[k][k+1]+=1
+  def _add_pheremone(self, ant_network, planet_ids):
+    for i in planet_ids:
+      for j in planet_ids:
+        if i!=j:
+          path = ant_network[i][j][1]
+          for k in range(len(path)-1):
+            self._pheremone_matrix[k][k+1]+=1
 
 
 
 
   def _decay_pheremone(self):
-    for i in len(self._pheremone_matrix):
-      for j in len(self._pheremone_matrix):
+    for i in range(len(self._planet_ids)):
+      for j in range(len(self._planet_ids)):
         self._pheremone_matrix[i][j] *= self._decay_rate
 
 
@@ -116,15 +117,19 @@ class ACO:
   The ant network had entries like [distance, path], we need to just have the next
   planet in the path, so path[1]
   '''
-  def _trim_network(self, ant_network):
-    for i in len(ant_network):
-      for j in len(ant_network):
-        ant_network[i][j]=ant_network[i][j][1][1]
+  def _trim_network(self, ant_network, planet_ids):
+    if L.INFO: logging.info(repr(ant_network))
+    for i in planet_ids:
+      for j in planet_ids:
+        if i!=j:
+          if L.INFO: logging.info(repr(i)+' '+repr(j)+ ' ' +repr(ant_network[i][j]))
+          ant_network[i][j]=ant_network[i][j][1][1]
 
   '''
   GetNetwork will return a matrix from the given planets with the next planet in line for each entry
   '''
   def GetNetwork(self, planet_ids):
+    if L.INFO: logging.info('in ACO GetNetwork')
     ant_network = {}
     score_network = {}
     for p in planet_ids:
@@ -134,20 +139,24 @@ class ACO:
         ant_network[p][o] = -1
         score_network[p][o] = 999999999999
 
+    if L.INFO: logging.info('Starting Loop')
     for i in range(self._num_runs):
+      if L.INFO: logging.info('i='+repr(i))
       self._initialize_ants(planet_ids)
 
       done = 0
       while not(done):
-        self._move(planet_ids)
+        done = self._move(planet_ids)
 
       self._update_paths(ant_network, score_network)
 
       self._decay_pheremone()
 
-      self._add_pheremone(ant_network)
+      self._add_pheremone(ant_network, planet_ids)
 
-    self._trim_network(ant_network)
+    if L.INFO: logging.info('Finished Loop!')
+
+    self._trim_network(ant_network, planet_ids)
 
     return ant_network
 

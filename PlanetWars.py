@@ -5,6 +5,7 @@ from math import ceil, sqrt
 from sys import stdout
 from Fleet import Fleet
 from Planet import Planet
+from ACO import ACO
 
 
 import logging
@@ -22,6 +23,7 @@ class PlanetWars:
     self._planets = []
     self._fleets = []
     self._planet_ids = []
+    self._max_regen = -1
     self.ParseGameState(gameState)
     self._distance = {}
     self._neighbors = {}
@@ -29,6 +31,7 @@ class PlanetWars:
     self._max_distance = self.InitDistance()
     self._max_regen = self.InitMaxRegen()
     self.InitConnectedness()
+    self.NormalizeConnectedness()
     if L.INFO: logging.info('done with distances')
     if L.INFO: logging.info('initialiaing and calculatings neighbors')
     self.InitNeighbors()
@@ -52,7 +55,31 @@ class PlanetWars:
     if L.INFO: logging.info('initilizing planet_list_list')
     self._planet_list_list = []
     if L.INFO: logging.info('done')
+    if L.INFO: logging.info('initializing ACO')
+    self._ACO = ACO(self._distance, self._neighbors, self._planet_ids)
     if L.INFO: logging.info('done with initialization')
+
+
+
+  #called after CalCOwnerAndNumShips
+  def _calc_neighbors(self, planet, turn, max):
+    near_enemy =999999999999
+    near_ally =99999999999
+    far_enemy =0
+    far_ally =0
+    for i in range(1,max+1):
+      for p in self.GetNeighbors(planet.PlanetID(), i):
+        if p.GetOwner(turn)==2:
+          if i < near_enemy: near_enemy=i
+          if i > far_enemy: far_enemy=i
+        elif p.GetOwner(turn)==1:
+          if i < near_ally: near_ally=i
+          if i > far_ally: far_ally=i
+    planet.AddNearestAlly(near_ally)
+    planet.AddNearestEnemy(near_enemy)
+    planet.AddFarthestAlly(far_ally)
+    planet.AddFarthestEnemy(far_enemy)
+
 
   def PushPlanetList(self, list_of_planets):
     self._planet_list_list.append(list_of_planets)
@@ -99,6 +126,14 @@ class PlanetWars:
       for o in self.Planets():
         con += (self.Distance(p.PlanetID(), o.PlanetID())**2)
       p.SetConnectedness(con)
+
+  def NormalizeConnectedness(self):
+    max = 0
+    for p in self.Planets():
+      if p.GetConnectedness() > max:
+        max = p.GetConnectedness()
+    for p in self.Planets():
+      p.SetConnectedness(float(p.GetConnectedness()/max))
 
 
   def InitializeLaunchQueue(self):
@@ -184,6 +219,20 @@ class PlanetWars:
     for p in self.MyPlanets(turn):
       diff += p.GrowthRate()
     return diff
+
+
+  def GetPlayerRegen(self, player = L.ALLY, turn=0):
+    regen = 0
+    for p in self.GetPlayerPlanets(player, turn):
+      regen += p.GrowthRate()
+    return regen
+
+  def GetPlayerPlanets(self, player = L.ALLY, turn=0):
+    planets = []
+    for p in self._planets:
+      if p.GetOwner[turn]==player:
+        planets.append(p)
+    return planets
 
   def ResetReinforcements(self):
     for p in self._planets:
@@ -449,6 +498,8 @@ class PlanetWars:
           if L.DEBUG: logging.debug('done')
         else:
           self._planet_ids.append(planet_id)
+          if int(tokens[5])>self._max_regen:
+            self._max_regen = int(tokens[5])
           p = Planet(planet_id, # The ID of this planet
                    int(tokens[3]), # Owner
                    int(tokens[4]), # Num ships

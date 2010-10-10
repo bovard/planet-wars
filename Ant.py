@@ -5,7 +5,7 @@ class Ant:
   def __init__(self, start_p_id, end_p_id):
     self._start_p_id = start_p_id
     self._current_p_id = start_p_id
-    self._hitory = []
+    self._history = []
     self._score = 0
     self._distance_travelled = 0
     self._end_p_id = end_p_id
@@ -16,6 +16,7 @@ class Ant:
     self._score += distance**2
     self._current_p_id = dest_id
     if dest_id == self._end_p_id:
+      self._history.append(self._current_p_id)
       return self._score
     return 0
 
@@ -35,4 +36,4 @@ class Ant:
     return self._current_p_id == self._end_p_id
 
   def GetResult(self):
-    return [self._score, self._distance_travelled, self._hitory]
+    return [self._score, self._distance_travelled, self._history]

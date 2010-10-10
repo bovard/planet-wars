@@ -28,6 +28,7 @@ class Planet:
     # that are committed to come help out your planet
     self._allied_reinforcements = []
     self._attacking_troops = []
+    self._moving_troops = []
     self._nearest_ally = []
     self._nearest_enemy = []
     self._farthest_enemy = []
@@ -36,14 +37,28 @@ class Planet:
     self._nearest_enemy.append(100000000000)
     self._farthest_enemy.append(0)
     self._farthest_ally.append(0)
+    self._forcast_demand = 0
 
     if L.DEBUG: logging.debug('done')
+
+  def PullOutReinforcing(self):
+    for i in range(len(self._reinforcing_troops)):
+      self._forcasting_troops[i] -= self._reinforcing_troops[i]
+
+  def SetForcastDemand(self, demand):
+    self._forcast_demand = demand
+
+  def GetForcastDemand(self):
+    return self._forcast_demand
 
   def SetConnectedness(self, con):
     self._connectedness = con
 
   def GetConnectedness(self):
     return self._connectedness
+
+
+
 
 
   # needs to be called once at the beginning of the game (done)
@@ -68,6 +83,11 @@ class Planet:
   def SetAlliedArrival(self, turn, ships):
     self._allied_arrivals[turn]=ships
 
+  def SetForcastingTroops(self, turn, ships):
+    self._forcasting_troops[turn]=ships
+
+  def SetReinforcingTroops(self, turn, ships):
+    self._reinforcing_troops[turn]=ships
 
   def SimulateAttack(self, turn):
     if L.DEBUG: logging.debug('Simulating an attack on turn'+repr(turn))
@@ -97,12 +117,14 @@ class Planet:
     self._allied_reinforcements=[]
     self._attacking_troops = []
     self._forcasting_troops = []
+    self._moving_troops = []
     for i in range(max+1):
       self._reinforcing_troops.append(0)
       self._defending_troops.append(0)
       self._allied_reinforcements.append(0)
       self._attacking_troops.append(0)
       self._forcasting_troops.append(0)
+      self._moving_troops.append(0)
 
   def ResetNeighbors(self):
     self._nearest_ally = []
@@ -270,6 +292,40 @@ class Planet:
     return self.GetFreeTroops(start_turn, end_turn) + self.GetDefendingTroops(start_turn, end_turn) \
       + self.GetReinforcingTroops(start_turn, end_turn) + self.GetAttackingTroops(start_turn, end_turn) \
       + self.GetForcastingTroops(start_turn, end_turn)
+
+  def GetSpecificTroops(self, list_id, start_turn=0, end_turn=-1):
+    list = self.GetList(list_id)
+    if L.DEBUG: logging.debug('in GetSpecificTroops ' + repr(list) + ' turn='+repr(start_turn))
+    if end_turn == -1:
+      return list[start_turn]
+    else:
+      return sum(list[start_turn:end_turn+1])
+
+
+  def GetSelectedTroops(self, list_of_ids, start_turn=0, end_turn=-1):
+    troops = 0
+    for id in list_of_ids:
+      troops+=self.GetSpecificTroops(id, start_turn, end_turn)
+    return troops
+
+  def GetList(self, list_id):
+    if list_id == L.FREE_TROOPS:
+      return self._free_troops
+    elif list_id == L.REINFORCING_TROOPS:
+      return self._reinforcing_troops
+    elif list_id == L.FORCASTING_TROOPS:
+      return self._forcasting_troops
+    elif list_id == L.DEFENDING_TROOPS:
+      return self._defending_troops
+    elif list_id == L.ATTACKING_TROOPS:
+      return self._attacking_troops
+    elif list_id == L.ALLIED_REINFORCEMENTS:
+      return self._allied_reinforcements
+    elif list_id == L.MOVING_TROOPS:
+      return self._moving_troops
+    else:
+      if L.ERROR: logging.error('Tried to return a non-existant list!')
+      return -1
 
 
   def SetFreeTroops(self, turn, troops):
