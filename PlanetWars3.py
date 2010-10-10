@@ -43,7 +43,7 @@ class PlanetWars3(PlanetWars2):
 
 
   def GetNeutralRating(self, planet):
-    calc = float(planet.GetNumShips())/planet.GrowthRate()+planet.NearestAlly()
+    calc = float(planet.GetNumShips())/(planet.GrowthRate()+.0001)+planet.NearestAlly()
     calc *= (1.5-planet.GetConnectedness())
     return calc
 
