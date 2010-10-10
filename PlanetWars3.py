@@ -6,7 +6,16 @@ from copy import deepcopy
 
 class PlanetWars3(PlanetWars2):
 
-  
+  def Defend(self, planet, turn):
+    if L.DEBUG: l.debug("in Defend")
+    if planet.GetOwner(turn-1)==L.ALLY and planet.GetFreeTroops(turn)<0 and planet.GetEnemyArrival(turn)>0:
+      if L.DEBUG: l.debug("this planet needs defending!")
+      to_send = planet.GetFreeTroops(turn)
+      if planet.GetSelectedTroops([L.FORCASTING_TROOPS, L.FREE_TROOPS], 0, turn-1) + self.GetSpecificPlayerTroops(planet, turn, L.ALLY, [L.FORCASTING_TROOPS, L.FREE_TROOPS]) + to_send >= 0:
+            self.AllocateAlliedTroops(planet, turn, to_send, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.DEFENDING_TROOPS)
+            planet.SetFreeTroops(turn, 0)
+            planet.AddAlliedReinforcements(turn, -1*to_send)
+    if L.DEBUG: l.debug('leaving Defend')
 
 
   def AttackNeutrals(self):
@@ -168,10 +177,12 @@ class PlanetWars3(PlanetWars2):
     if L.DEBUG: planet.PrintSummary()
 
     #looking for allied planets in range of the target with max(nearest enemey)
-    for dist in range(self.GetGlobalFarthestEnemy(),0,-1):
+    for dist in range(min(self.GetGlobalFarthestEnemy()+1,self.MaxDistance()),0,-1):
+      if L.DEBUG: l.debug('in Defend looking for planets with nearest enemy of '+repr(dist))
       for p in self.Planets():
         distance = self.Distance(planet.PlanetID(), p.PlanetID())
-        if distance <= turn and p.NearestEnemy()== dist and p.GetOwner(distance) == L.ALLY:
+        if L.DEBUG: l.debug('Looking at planet '+repr(p.PlanetID())+' '+repr(distance)+ ' units away with near='+repr(p.NearestEnemy()))
+        if distance <= turn and p.NearestEnemy()== dist and (p.GetOwner(distance) == L.ALLY or (p.GetOwner(distance) == -1 and p.GetOwner(distance-1) == L.ALLY)):
           #the planet fits the criteria, start committing troops
           if L.DEBUG: l.debug('Found a candidate planet!')
           if L.DEBUG: p.PrintSummary()
@@ -183,7 +194,7 @@ class PlanetWars3(PlanetWars2):
               if L.DEBUG: l.debug('Committed '+repr(committed)+' troops from the planet')
               if committed > 0:
                 ships += committed
-                
+                if L.DEBUG: l.debug('Only '+repr(ships)+' left!')
                 if i==0 and p.PlanetID()!=planet.PlanetID() and self.Distance(p.PlanetID(), planet.PlanetID())==turn:
                   if L.INFO: l.info('Seing '+repr(committed)+' troops from Planet '+repr(p.PlanetID())+' to Planet '+repr(planet.PlanetID()))
                   self.AddLaunch(p.PlanetID(), planet.PlanetID(), committed)
@@ -192,8 +203,13 @@ class PlanetWars3(PlanetWars2):
             i-=1
           if L.DEBUG: l.debug('Done with planet')
           if L.DEBUG: p.PrintSummary()
-    if L.DEBUG: l.debug('leaving AllocateTroops!')
     if L.DEBUG: planet.PrintSummary()
+    if ships >= 0:
+      if L.DEBUG: l.debug('leaving AllocateTroops with ships='+repr(ships)+ '(sucess)!')
+      return ships
+    else:
+      if L.ERROR: l.error('leaving AllocateTroops with ships='+repr(ships)+ '(FAILURE)!')
+      return ships
 
 
 

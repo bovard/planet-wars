@@ -1,6 +1,6 @@
-
 import logging
 import Logging as L
+
 
 class Planet:
   def __init__(self, planet_id, owner, num_ships, growth_rate, x, y):
@@ -57,12 +57,7 @@ class Planet:
   def GetConnectedness(self):
     return self._connectedness
 
-
-
-
-
   # needs to be called once at the beginning of the game (done)
-
   def InitArrivals(self, max):
     for i in range(max+1):
       self._allied_arrivals.append(0)
@@ -106,8 +101,6 @@ class Planet:
     self._allied_arrivals.append(0)
 
 
-
-
   # this should be called before every turn starts
   # reinforcing troops are committed to respond to an enemy threat
   # defending troops are committed to respond to an actualy enemy attack
@@ -144,35 +137,43 @@ class Planet:
   def FarthestAlly(self, turn=0):
     return self._farthest_ally[turn]
 
+  def ReduceNumShips(self, turn, to_reduce):
+    self._num_ships[turn]-=to_reduce
+
   # this should be called after troop levels are set (even when creating a planet!)(done)
-  def ResetFreeTroops(self):
+  def ResetFreeTroops(self, max):
     if L.DEBUG: logging.debug('in ResetFreeTroops')
-    self._free_troops = []
+    self._free_troops = [0 for i in range(max+1)]
     if self._owner[0] == 1:
-      self._free_troops.append(self._num_ships[0])
+      self._free_troops[0]=self._num_ships[0]
     elif self._owner[0] == 2:
-      self._free_troops.append(-1*self._num_ships[0])
+      self._free_troops[0]=-1*self._num_ships[0]
     else:
-      self._free_troops.append(0)
+      self._free_troops[0]=0
     if L.DEBUG: logging.debug('done')
 
 
   def AddNearestAlly(self, near):
     self._nearest_ally.append(near)
 
+
   def AddNearestEnemy(self, near):
     self._nearest_enemy.append(near)
+
 
   def AddFarthestAlly(self, far):
     self._farthest_ally.append(far)
 
+
   def AddFarthestEnemy(self, far):
     self._farthest_enemy.append(far)
 
+  def AddAlliedReinforcements(self, turn, to_add):
+    self._allied_reinforcements[turn]+=to_add
 
 
   # this needs to be called every turn sequentailly to work
-  def CalcOwnerAndNumShips(self, turn, update=0):
+  def CalcOwnerAndNumShips(self, turn, update=1):
     levels = [0, self._allied_arrivals[turn]+self._allied_reinforcements[turn], self._enemy_arrivals[turn]]
     levels[self._owner[turn-1]] += self._num_ships[turn-1]
     if not(self._owner[turn-1] == 0):
@@ -204,8 +205,9 @@ class Planet:
       else:
         self._num_ships[turn]= max-max2
 
+
   # this needs to be called every turn sequentially to work, call at the begginning of the turn
-  def CalcFreeTroops(self, turn, update=0):
+  def CalcFreeTroops(self, turn, update=1):
     if L.DEBUG: logging.debug('in CalcFreeTroops')
     self.PrintSummary()
     levels = [0, self._allied_arrivals[turn], self._enemy_arrivals[turn]]
@@ -337,9 +339,10 @@ class Planet:
   def PlanetID(self):
     return self._planet_id
 
-  def SetOwner(self, new_owner):
-    self._owner = []
-    self._owner.append(new_owner)
+  def SetOwner(self, new_owner, max):
+    self._owner = [-1 for i in range(max+1)]
+    self._owner[0]=new_owner
+
 
   def GetOwner(self, turn=0):
     return self._owner[turn]
@@ -366,11 +369,11 @@ class Planet:
   def AlliedReinforcements(self):
     return self._allied_reinforcements
 
-  def SetNumShips(self, new_num_ships):
+  def SetNumShips(self, new_num_ships, max):
     if L.DEBUG: logging.debug('in SetNumShips with new_num_ships='+repr(new_num_ships))
-    self._num_ships = []
+    self._num_ships = [-1000000000 for i in range(max+1)]
     if L.DEBUG: logging.debug('adding some new ships'+repr(new_num_ships))
-    self._num_ships.append(new_num_ships)
+    self._num_ships[0]=new_num_ships
 
   def GrowthRate(self):
     return self._growth_rate
@@ -407,12 +410,13 @@ class Planet:
       return 0
     else:
       if L.INFO: logging.info('________________________________________________________________')
-      if L.INFO: logging.info('Planet '+repr(self._planet_id)+' with '+repr(self._num_ships[0]))
+      if L.INFO: logging.info('Planet '+repr(self._planet_id)+' with '+repr(self._num_ships[0])+' and regen '+repr(self.GrowthRate()))
       if L.INFO: logging.info('With nearest '+repr(self._nearest_ally[0])+','+repr(self._nearest_enemy[0]))
       if L.INFO: logging.info('and furthest '+repr(self._farthest_ally[0])+','+repr(self._farthest_enemy[0]))
       if L.INFO: logging.info('Allied Arrivals - '+repr(self._allied_arrivals))
       if L.INFO: logging.info('Enemy Arrivals  - '+repr(self._enemy_arrivals))
       if L.INFO: logging.info('Owner List      - '+repr(self._owner))
+      if L.INFO: logging.info('Num Ships List  - '+repr(self._num_ships))
       if L.INFO: logging.info('FreeTroops List - '+repr(self._free_troops))
       if L.INFO: logging.info('Reinforcing List- '+repr(self._reinforcing_troops))
       if L.INFO: logging.info('Forcasing List  - '+repr(self._forcasting_troops))

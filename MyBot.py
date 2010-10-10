@@ -29,11 +29,12 @@ def MainLoop(pw):
     for dist in range(1, pw.MaxDistance()+1):
       if L.DEBUG: logging.debug('dist='+repr(dist))
       for p in pw.MyPlanets(i):
-        if p.GetEnemyArrival(i+1)>0 and p.GetOwner(i)==1 and p.GetFreeTroops(i+1) < 0:
+        if p.GetEnemyArrival(i+1)>0 and p.GetOwner(i)==L.ALLY and p.GetFreeTroops(i+1) < 0:
           if L.INFO: logging.info('defending Planet '+repr(p.PlanetID())+'on turn'+repr(i+1)+' because '+repr(p.GetEnemyArrival(i+1)) + ' > 0')
-          if pw.CanDefend(p,i+1):
-            if L.INFO: logging.info('Planet'+repr(p.PlanetID())+' is being defended on turn '+repr(i+1))
-            pw.CommitDefend(p,i+1)
+          pw.Defend(p, i+1)
+#          if pw.CanDefend(p,i+1):
+#            if L.INFO: logging.info('Planet'+repr(p.PlanetID())+' is being defended on turn '+repr(i+1))
+#            pw.CommitDefend(p,i+1)
         if p.NearestEnemy()==i and p.NearestEnemy()==dist :
           if L.DEBUG: logging.debug('reinfrocing a planet because '+repr(p.NearestEnemy())+" == "+repr(dist))
           if pw.CanReinforce(p,i+1):

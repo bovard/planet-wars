@@ -32,6 +32,8 @@ class PlanetWars:
     self._max_regen = self.InitMaxRegen()
     self.InitConnectedness()
     self.NormalizeConnectedness()
+    self.ResetFreeTroops(self._max_distance)
+    self.InitOwnerAndNumShips(self._max_distance)
     if L.INFO: logging.info('done with distances')
     if L.INFO: logging.info('initialiaing and calculatings neighbors')
     self.InitNeighbors()
@@ -59,7 +61,16 @@ class PlanetWars:
     self._ACO = ACO(self._distance, self._neighbors, self._planet_ids)
     if L.INFO: logging.info('done with initialization')
 
+  def InitOwnerAndNumShips(self, max):
+    for p in self.Planets():
+      p.SetOwner(p.GetOwner(0), max)
+      p.SetNumShips(p.GetNumShips(0), max)
 
+
+
+  def ResetFreeTroops(self, max):
+    for p in self.Planets():
+      p.ResetFreeTroops(max)
 
   #called after CalCOwnerAndNumShips
   def _calc_neighbors(self, planet, turn, max):
@@ -175,12 +186,12 @@ class PlanetWars:
           if L.INFO: logging.info('balls?')
           availiable = p.GetNumShips()
           if availiable >= to_send:
-            p.SetNumShips(availiable-to_send)
+            p.ReduceNumShips(0, to_send)
             self.IssueOrder(p.PlanetID(),o.PlanetID(),to_send)
           elif availiable > 0:
             if L.ERROR: logging.error('BAD TROOP TRANSPORT')
             if L.ERROR: logging.error('Tried to send '+repr(to_send)+' but had '+repr(availiable))
-            p.SetNumShips(0)
+            p.ReduceNumShips(0, availiable)
             self.IssueOrder(p.PlanetID(),o.PlanetID(),availiable)
           else:
             if L.ERROR: logging.error('somehow we have a negative amount on one of the planets.... oops?')
@@ -336,6 +347,7 @@ class PlanetWars:
     if L.DEBUG: logging.debug('done')
     if L.INFO: logging.info('setting reinforcements')
     self.ResetReinforcements()
+    self.ResetFreeTroops(self._max_distance)
     if L.INFO: logging.info('done setting reinforcements')
     if L.INFO: logging.info('resetting nearest/farthest neighbors')
     self.ResetNeighbors()
@@ -492,9 +504,8 @@ class PlanetWars:
           if L.DEBUG: logging.debug('updating planet '+repr(planet_id))
           p = self.GetPlanet(planet_id)
           if L.DEBUG: logging.debug('pulled the planet')
-          p.SetOwner(int(tokens[3]))
-          p.SetNumShips(int(tokens[4]))
-          p.ResetFreeTroops()
+          p.SetOwner(int(tokens[3]), self._max_distance)
+          p.SetNumShips(int(tokens[4]), self._max_distance)
           if L.DEBUG: logging.debug('done')
         else:
           self._planet_ids.append(planet_id)
@@ -507,7 +518,6 @@ class PlanetWars:
                    float(tokens[1]), # X
                    float(tokens[2])) # Y
           self._planets.append(p)
-          p.ResetFreeTroops()
         planet_id += 1
 
       elif tokens[0] == "F":
