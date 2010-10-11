@@ -6,6 +6,7 @@ import copy
 class Bee:
   def __init__(self, order, random=0):
     if L.DEBUG: l.debug('creating Bee')
+    if L.DEBUG: l.debug('order = '+repr(order))
     if (random):
       self._order = copy.copy(order)
     else:
@@ -28,6 +29,9 @@ class Bee:
 
   def GetOrder(self):
     return self._order
+
+  def GetNewOrder(self):
+    return self._new_order
 
   def GetTurns(self):
     return self._turns
@@ -53,13 +57,13 @@ class Bee:
     to_choose = copy.copy(planet_ids)
     for i in range(len(to_choose),0, -1):
       to_choose.append(to_choose.pop(random.randrange(0,i)))
-    return order
+    return to_choose
 
   @staticmethod
   def GenerateMutation(order):
     to_return = copy.copy(order)
-    pos1 = random.rangerange(0, len(to_return))
-    pos2 = random.rangerange(0, len(to_return))
+    pos1 = random.randrange(0, len(to_return))
+    pos2 = random.randrange(0, len(to_return))
     temp = to_return[pos1]
     to_return[pos1]=to_return[pos2]
     to_return[pos2]=temp

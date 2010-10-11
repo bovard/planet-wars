@@ -200,6 +200,7 @@ def DoTurn(pw, turn):
     if L.INFO: logging.info('-------------------Attacking Neutrals-----------------------------------')
     #AttackNeutrals(pw)
     pw.AttackNeutrals()
+    #pw.GetBeeOrder()
     if L.INFO: logging.info('-------------------Finished Attacking Neutrals--------------------------')
   if L.INFO: logging.info('-------------------Reinforcing------------------------------------------')
   #pw.Reinforce()
