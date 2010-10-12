@@ -20,20 +20,33 @@ class PlanetWars3(PlanetWars2):
 
 
   def AttackNeutrals(self):
-#    if L.DEBUG: l.debug('in AttackNeutrals')
-#    entries = []
-#    for p in self.NeutralPlanets():
-#      if self.GetControl(p, self.MaxDistance())>0:
-#        entries.append([p.PlanetID(), self.GetNeutralRating(p)])
-#
-#    if L.DEBUG: l.debug('entries completed')
-#    entries.sort(L.neutral_entry_compare)
-#    if L.DEBUG: l.debug('sorted entries: '+repr(entries))
+    if L.DEBUG: l.debug('in AttackNeutrals')
+    entries = []
+    for p in self.NeutralPlanets():
+      if self.GetControl(p, self.MaxDistance())>0:
+        entries.append([p.PlanetID(), self.GetNeutralRating(p)])
 
+    if L.DEBUG: l.debug('entries completed')
+    entries.sort(L.neutral_entry_compare)
+    if L.DEBUG: l.debug('sorted entries: '+repr(entries))
+
+    for entry in entries:
+      p = self.GetPlanet(entry[0])
+      if L.CRITICAL: l.critical('looking at neutral planet '+repr(entry))
+      if L.CRITICAL: l.critical('with num_ships='+repr(p.GetNumShips())+' and regen '+repr(p.GrowthRate()))
+      for i in range(1, self.GetGlobalNearestEnemy()):
+        if self.GetSpecificControl(p, i, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ALL_TROOPS) > 0:
+          to_send = -1*self.GetPlayerTroops(p, i, L.ENEMY)
+          to_send -= (p.GetNumShips(i)+1)
+          if self.GetSpecificPlayerTroops(p, i, L.ALLY, [L.FORCASTING_TROOPS, L.FREE_TROOPS]) + to_send >= 0:
+            self.AllocateAlliedTroops(p, i, to_send, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ATTACKING_TROOPS)
+            break
+
+
+  def BeeAttackNeutrals(self):
     entries = self.GetBeeOrder()
 
     for entry in entries:
-      #p = self.GetPlanet(entry[0])
       if L.CRITICAL: l.critical('looking at neutral planet '+repr(entry))
       p = self.GetPlanet(entry)
       if L.CRITICAL: l.critical('with num_ships='+repr(p.GetNumShips())+' and regen '+repr(p.GrowthRate()))
@@ -61,7 +74,7 @@ class PlanetWars3(PlanetWars2):
     if L.DEBUG: l.debug('creating instance')
     hive = ABC(len(self._planets), self._max_distance, num_ships, owners, growth_rates, self._distance, self._neighbors)
     if L.DEBUG: l.debug('calling GetOptimalOrder')
-    order = hive.GetOptimalOrder(5)
+    order = hive.GetOptimalOrder(10)
     if L.CRITICAL: l.critical('done, order = '+repr(order))
     return order
 

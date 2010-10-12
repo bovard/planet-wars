@@ -138,6 +138,7 @@ class ABC:
     for id in order:
       turns += self._take_planet(id, num_ships, owners)
       owners[id]=1
+      num_ships[id]=-1*turns*self._growth_rates[id]+1
       #do something
     if L.DEBUG: l.debug('leaving _play_through_order')
     return turns
@@ -160,19 +161,21 @@ class ABC:
       avaliable = 0
       for i in range(1, min(turns+1, self._max_distance+1)):
         for p_id in self._neighbors[id][i]:
-          avaliable += num_ships[p_id]
+          if num_ships[p_id]>0:
+            avaliable += num_ships[p_id]
 
       if avaliable > num_ships[id]:
         if L.DEBUG: l.debug('should be able to capture ship this next turn')
         done = 1
         for i in range(1, min(turns+1, self._max_distance+1)):
           for p_id in self._neighbors[id][i]:
-            avaliable -= num_ships[p_id]
-            if avaliable >= -1:
-              num_ships[p_id]=0
-            else:
-              num_ships[p_id]=-1*(avaliable+1)
-              break
+            if num_ships[p_id]>0:
+              avaliable -= num_ships[p_id]
+              if avaliable >= -1:
+                num_ships[p_id]=0
+              else:
+                num_ships[p_id]=-1*(avaliable+1)
+                break
       self._add_turn(num_ships, owners)
     if L.DEBUG: l.debug('Num ships changed to '+repr(num_ships))
     if L.DEBUG: l.debug('leaving _take_planet with turns='+repr(turns))
