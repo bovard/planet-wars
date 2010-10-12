@@ -132,10 +132,12 @@ class PlanetWars:
   It must be called after initialize distance
   '''
   def InitConnectedness(self):
+    if L.DEBUG: logging.debug('in InitConnectedness')
     for p in self.Planets():
       con = 0
       for o in self.Planets():
         con += (self.Distance(p.PlanetID(), o.PlanetID())**2)
+      if L.DEBUG: logging.debug('setting connectedness for planet '+repr(p.PlanetID)+ ' to '+repr(con))
       p.SetConnectedness(con)
 
   def NormalizeConnectedness(self):
@@ -144,7 +146,7 @@ class PlanetWars:
       if p.GetConnectedness() > max:
         max = p.GetConnectedness()
     for p in self.Planets():
-      p.SetConnectedness(float(p.GetConnectedness()/max))
+      p.SetConnectedness(float(p.GetConnectedness())/max)
 
 
   def InitializeLaunchQueue(self):

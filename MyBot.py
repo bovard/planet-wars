@@ -32,24 +32,13 @@ def MainLoop(pw):
         if p.GetEnemyArrival(i+1)>0 and p.GetOwner(i)==L.ALLY and p.GetFreeTroops(i+1) < 0:
           if L.INFO: logging.info('defending Planet '+repr(p.PlanetID())+'on turn'+repr(i+1)+' because '+repr(p.GetEnemyArrival(i+1)) + ' > 0')
           pw.Defend(p, i+1)
-#          if pw.CanDefend(p,i+1):
-#            if L.INFO: logging.info('Planet'+repr(p.PlanetID())+' is being defended on turn '+repr(i+1))
-#            pw.CommitDefend(p,i+1)
-        if p.NearestEnemy()==i and p.NearestEnemy()==dist :
-          if L.DEBUG: logging.debug('reinfrocing a planet because '+repr(p.NearestEnemy())+" == "+repr(dist))
-          if pw.CanReinforce(p,i+1):
-            if L.DEBUG: logging.debug('Planet'+repr(p.PlanetID())+' is being reinforced on turn '+repr(i+1))
-            pw.CommitReinforce(p,i+1)
-        elif p.FarthestEnemy()==i and p.FarthestEnemy()==dist:
-          if L.DEBUG: logging.debug('forcast reinfrocing a planet because '+repr(p.NearestEnemy())+" == "+repr(dist))
-          if L.DEBUG: logging.debug('forcasting...')
-          if L.DEBUG: logging.debug('Planet'+repr(p.PlanetID())+' is being reinforced on turn '+repr(i+1))
-          pw.CommitReinforce(p,i+1, 1)
-    for dist in range(1, pw.MaxDistance()+1):
-      for p in pw.EnemyPlanets(i):
-        if (p.NearestAlly()==i and p.NearestAlly()<=dist) or (p.FarthestAlly()==i and p.FarthestAlly()==dist):
-          if not(pw.CanReinforce(p,i+1)):
-            pw.EnemyCommitReinforce(p,i+1)
+
+    #do we want to be commiting enemy troops?
+#    for dist in range(1, pw.MaxDistance()+1):
+#      for p in pw.EnemyPlanets(i):
+#        if (p.NearestAlly()==i and p.NearestAlly()<=dist) or (p.FarthestAlly()==i and p.FarthestAlly()==dist):
+#          if not(pw.CanReinforce(p,i+1)):
+#            pw.EnemyCommitReinforce(p,i+1)
 
     #calculate owner and number of ships
     if L.DEBUG: logging.debug('calculating owner and numnber of ships')
@@ -149,7 +138,7 @@ def Reinforce(pw):
   for p in pw.MyPlanets():
     if L.INFO: logging.info('starting to reinforce from planet'+repr(p.PlanetID()))
     if L.INFO: logging.info('sending reinforcements! of '+repr(p.GetFreeTroops())+ ' or '+repr(p.GetReinforcingTroops()))
-    if p.GetReinforcingTroops()>0 or p.GetForcastingTroops()>0:
+    if p.GetFreeTroops(0):
       if L.INFO: logging.info('have some troops to reinforce with')
       near_enemy = p.NearestEnemy()
       if near_enemy <= pw.MaxDistance():
@@ -167,8 +156,9 @@ def Reinforce(pw):
                 nearest_enemy = o.NearestEnemy(i)
         if to_send>=0:
           if L.INFO: logging.info('Launching reinforcements!')
-          pw.AddLaunch(p.PlanetID(),to_send,p.GetReinforcingTroops()+p.GetForcastingTroops())
-          #pw.CommitTroops(p,0,p.GetFreeTroops(),[p.FreeTroops()],p.ReinforcingTroops())
+          pw.AddLaunch(p.PlanetID(),to_send,p.GetFreeTroops(0))
+          #pw.CommitTroops2(planet, turn, ships, source_lists_ids, dest_list_id, target)
+
 
 
 def LaunchAttack(pw):

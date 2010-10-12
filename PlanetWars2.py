@@ -19,6 +19,7 @@ class PlanetWars2(PlanetWars):
       if not(p.PlanetID() in p_ids):
         p_ids.append(p.PlanetID())
     ant_network = self._ACO.GetNetwork(p_ids)
+
     if L.INFO: logging.info('done, starting loop')
     for p in self.MyPlanets():
       i = 1

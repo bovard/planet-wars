@@ -38,6 +38,7 @@ class Planet:
     self._farthest_enemy.append(0)
     self._farthest_ally.append(0)
     self._forcast_demand = 0
+    self._reinforce_demand = 0
 
     if L.DEBUG: logging.debug('done')
 
@@ -56,6 +57,12 @@ class Planet:
 
   def GetConnectedness(self):
     return self._connectedness
+
+  def GetReinforceDemand(self):
+    return self._reinforce_demand
+
+  def AddReinforceDemand(self, ships):
+    self._reinforce_demand += ships
 
   # needs to be called once at the beginning of the game (done)
   def InitArrivals(self, max):
@@ -84,6 +91,9 @@ class Planet:
   def SetReinforcingTroops(self, turn, ships):
     self._reinforcing_troops[turn]=ships
 
+  def SetAlliedReinforcemnt(self, turn, ships):
+    self._allied_reinforcements[turn]=ships
+
   def SimulateAttack(self, turn):
     if L.DEBUG: logging.debug('Simulating an attack on turn'+repr(turn))
     self.PrintSummary()
@@ -95,6 +105,8 @@ class Planet:
 
   # this should be called before flights are processed (done)
   def Update(self):
+    self._forcast_demand = 0
+    self._reinforce_demand = 0
     self._enemy_arrivals = self._enemy_arrivals[1:]
     self._enemy_arrivals.append(0)
     self._allied_arrivals = self._allied_arrivals[1:]
@@ -303,6 +315,10 @@ class Planet:
     else:
       return sum(list[start_turn:end_turn+1])
 
+  def SetSpecificTroops(self, list_id, turn, ships):
+    list = self.GetList(list_id)
+    if L.DEBUG: logging.debug('in SetSpecificTroops ' + repr(list) + ' turn='+repr(turn))
+    list[turn]=ships
 
   def GetSelectedTroops(self, list_of_ids, start_turn=0, end_turn=-1):
     troops = 0
