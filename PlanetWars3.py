@@ -57,25 +57,13 @@ class PlanetWars3(PlanetWars2):
   def CommitReinforcements(self):
     if L.DEBUG: l.debug('in CommitReinforcements (PW3)')
     #create the requests
-    requests = []
-    for p in self.EnemyPlanets():
-      dist = p.NearestAlly()
-      for o in self._neighbors[p.PlanetID()][distance]:
-        if o.GetOwner(dist)==L.ALLY:
-          request.append([o.PlanetID(), dist, p.GetNumShips()])
-          break
-
-    #fill requests
-    for entry in request:
-      p = self.GetPlanet(entry[0])
-      turn = entry[1]
-      ships = entry[2]
-      avaliable = self.GetSpecificPlayerTroops(p, turn, L.ALLY, [L.FREE_TROOPS])
-      if avaliable >= ships:
-        self.AllocateAlliedTroops(p, turn, -1*ships, [L.FREE_TROOPS], [L.REINFORCING_TROOPS])
-      else:
-        self.AllocateAlliedTroops(p, turn, -1*avalialbe, [L.FREE_TROOPS], [L.REINFORCING_TROOPS])
-        p.AddReinforceDemand(ships - avaliable)
+    for p in self.MyPlanets():
+      if p.NearestEnemy() < p.NearestAlly():
+        ships = 0
+        for o in self.GetNeighbors(p.PlanetID(), p.NearestEnemy()):
+          if o.GetOwner()==L.ENEMY:
+            ships -= o.GetNumShips()
+        p.AllocateAlliedTroops(p, p.NearestEnemy(), ships, [L.FREE_TROOPS], [L.REINFORCING_TROOPS])
 
 
 
@@ -241,6 +229,8 @@ class PlanetWars3(PlanetWars2):
     else:
       control += planet.GetNumShips(turn)
     for i in range(1, turn+1):
+      if planet.GetOwner(turn)==L.NEUTRAL and control > 0:
+        control += planet.GrowthRate()
       for p in self.GetNeighbors(planet.PlanetID(), i):
         if p.GetOwner(turn-i)==L.ALLY:
           control += p.GetNumShips(turn-i)

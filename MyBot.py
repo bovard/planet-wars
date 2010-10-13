@@ -177,7 +177,7 @@ def DoTurn(pw, turn):
   if L.INFO: logging.info('-------------------Attacking Enemies------------------------------------')
   AttackEnemies(pw)
   if L.INFO: logging.info('-------------------Finished Attacking Enemies---------------------------')
-  if 1:
+  if len(pw.EnemyPlanets())>0:
     #if L.INFO: logging.info('-------------------Activating Neutral Hunter----------------------------')
     #to_attack = pw.RecursiveNeutralHunter(int(pw.MaxDistance()/2) )
     #if L.WARNING: logging.warning('Neutral Hunter said to attack '+repr(to_attack))
