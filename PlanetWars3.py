@@ -56,15 +56,22 @@ class PlanetWars3(PlanetWars2):
   '''
   def CommitReinforcements(self):
     if L.DEBUG: l.debug('in CommitReinforcements (PW3)')
-    #create the requests
-    for p in self.MyPlanets():
-      if p.NearestEnemy() < p.NearestAlly():
-        ships = 0
-        for o in self.GetNeighbors(p.PlanetID(), p.NearestEnemy()):
-          if o.GetOwner()==L.ENEMY:
-            ships -= o.GetNumShips()
-        p.AllocateAlliedTroops(p, p.NearestEnemy(), ships, [L.FREE_TROOPS], [L.REINFORCING_TROOPS])
+    #reinforce against all current enemy planets
+    for p in self.EnemyPlanets():
+      if p.NearestAlly() < self.MaxDistance():
+        for o in self.GetNeighbors(p.PlanetID(), p.NearestAlly()):
+          if o.GetOwner()==L.ALLY:
+            self.AllocateAlliedTroops(o, p.NearestAlly(), p.GetNumShips(), [L.FREE_TROOPS], [L.REINFORCING_TROOPS])
+            break
 
+    #reinforce against planets that the enemy will take over in the future
+    for turn in range(1, int(self.MaxDistance()/2)):
+      for p in self.EnemyPlanets(turn):
+        if p.GetOwner(turn-1)!=L.ENEMY and p.NearestAlly() < self.MaxDistance():
+          for o in self.GetNeighbors(p.PlanetID(), p.NearestAlly()):
+            if o.GetOwner()==L.ALLY:
+              self.AllocateAlliedTroops(o, p.NearestAlly(), p.GetNumShips(), [L.FREE_TROOPS], [L.REINFORCING_TROOPS])
+              break
 
 
 
@@ -82,16 +89,30 @@ class PlanetWars3(PlanetWars2):
 
   def AttackNeutrals(self):
     if L.DEBUG: l.debug('in AttackNeutrals')
+    done = 0
+    while not(done):
+      done = self.AttackANeutral()
+      if L.DEBUG: l.debug('finished attacking a neutral!')
+    if L.DEBUG: l.debug('leaving AttackNeutrals')
+
+  def AttackANeutral(self):
+    if L.DEBUG: l.debug('in AttackANeutral')
+
+    #choose which neturals to consider and put them in a list
     entries = []
     for p in self.NeutralPlanets():
       if self.GetControl(p, self.MaxDistance())>0 and p.GetOwner(min(p.NearestAlly(), self.MaxDistance()))!=L.ALLY:
         entries.append([p.PlanetID(), self.GetNeutralRating(p)])
 
+    #sort the list
     if L.DEBUG: l.debug('entries completed')
     entries.sort(L.neutral_entry_compare)
     if L.DEBUG: l.debug('sorted entries: '+repr(entries))
 
-    for entry in entries:
+    #attack the first entry in the list
+    #for entry in entries:
+    if len(entries)>0:
+      entry = entries[0]
       p = self.GetPlanet(entry[0])
       if L.DEBUG: l.debug('looking at neutral planet '+repr(entry))
       if L.DEBUG: l.debug('with num_ships='+repr(p.GetNumShips())+' and regen '+repr(p.GrowthRate()))
@@ -104,7 +125,9 @@ class PlanetWars3(PlanetWars2):
           if L.DEBUG: l.debug('we can take it over! allocating troops')
           self.AllocateAlliedTroops(p, i, to_send, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ATTACKING_TROOPS)
           if L.DEBUG: l.debug('we allocated attacking troops')
-          break
+          return 0
+      return 1
+    return 1
 
 
   def BeeAttackNeutrals(self):
@@ -153,25 +176,32 @@ class PlanetWars3(PlanetWars2):
     return calc
 
   def AttackEnemies(self):
+    if L.DEBUG: l.debug('in AttackEnemies')
     for p in self.Planets():
+      if L.DEBUG: p.PrintSummary()
       start = -1
-      end = -1
+      end = self.MaxDistance()
       for i in range(1, self.MaxDistance()+1):
         if p.GetOwner(i)==L.ENEMY and start ==-1:
           start = i
-        elif p.GetOwner(i)!=L.ENEMY and start > 0 and end ==-1:
+        elif p.GetOwner(i)!=L.ENEMY and start > 0 and end ==self.MaxDistance():
           end = i
-      self.AttackEnemyPlanet(p, start, end)
+          break
+      if L.DEBUG: l.debug('this planet is controlled by the enemy from turn '+repr(start)+' to turn '+repr(end))
+      if start != -1:
+        self.AttackEnemyPlanet(p, start, end)
 
 
 
   def AttackEnemyPlanet(self, planet, start_turn, end_turn):
-    if self.GetControl(planet, end_turn)>0:
+    if L.DEBUG: l.debug('attacking enemy planet '+repr(planet.PlanetID()))
+    if self.GetControl(planet, min(max(planet.FarthestAlly(), planet.FarthestEnemy()), end_turn))>0:
       for i in range(start_turn, end_turn+1):
         if self.GetSpecificControl(planet, i, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ALL_TROOPS) > 0:
           to_send = -1*self.GetPlayerTroops(planet, i, L.ENEMY)
           to_send -= (planet.GetNumShips(i)+1)
-          self.AllocateAlliedTroops(planet, i, to_send, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ATTACKING_TROOPS)
+          if self.GetSpecificPlayerTroops(planet, i, L.ALLY, [L.FORCASTING_TROOPS, L.FREE_TROOPS]) + to_send > 0:
+            self.AllocateAlliedTroops(planet, i, to_send, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ATTACKING_TROOPS)
           return 1
       return 0
 
@@ -219,23 +249,28 @@ class PlanetWars3(PlanetWars2):
   GetControl should return the 'Control' or the result if all planets in range would launch
   all availiable troops at planet to get there at turn
   '''
-  def GetControl(self, planet, turn):
+  def GetControl(self, planet, turn, player = L.ALLY):
     if L.DEBUG: l.debug('in GetControl')
     if L.DEBUG: l.debug('calculating Control for Planet '+repr(planet.PlanetID())+' on turn '+repr(turn))
     control = 0
-    if planet.GetOwner(turn)!=L.ALLY:
+    if planet.GetOwner(turn)!= player:
       control -= 1
       control -= planet.GetNumShips(turn)
+      if L.DEBUG: l.debug('not controlled by player! controol is '+repr(control))
     else:
       control += planet.GetNumShips(turn)
+      if L.DEBUG: l.debug('controlled by player! controol is '+repr(control))
     for i in range(1, turn+1):
       if planet.GetOwner(turn)==L.NEUTRAL and control > 0:
         control += planet.GrowthRate()
+        if L.DEBUG: l.debug('player is in control of planet, adding regen, control is '+repr(control))
       for p in self.GetNeighbors(planet.PlanetID(), i):
-        if p.GetOwner(turn-i)==L.ALLY:
+        if p.GetOwner(turn-i)==player:
           control += p.GetNumShips(turn-i)
-        elif p.GetOwner(turn-i)==L.ENEMY:
+          if L.DEBUG: l.debug('player planet detected, adding ships, control is '+repr(control))
+        elif p.GetOwner(turn-i)!=player and p.GetOwner(turn-i)!=L.NEUTRAL:
           control -= p.GetNumShips(turn-i)
+          if L.DEBUG: l.debug('enemy player planet detected, subtracing ships, control is '+repr(control))
     if L.DEBUG: l.debug('leaving GetControl with control = '+repr(control))
     return control
 

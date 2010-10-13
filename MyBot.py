@@ -45,6 +45,11 @@ def MainLoop(pw):
     for p in pw.Planets():
       p.CalcOwnerAndNumShips(i+1)
 
+  if L.INFO: logging.info('committing reinforcements')
+  pw.CommitReinforcements()
+  if L.INFO: logging.info('done')
+
+
   if L.INFO: logging.info('i should be done')
   for p in pw.Planets():
     if L.INFO: p.PrintSummary(1)
@@ -175,7 +180,8 @@ def DoTurn(pw, turn):
   MainLoop(pw)
   if L.INFO: logging.info('-------------------Finished the Main Loop-------------------------------')
   if L.INFO: logging.info('-------------------Attacking Enemies------------------------------------')
-  AttackEnemies(pw)
+  #AttackEnemies(pw)
+  pw.AttackEnemies()
   if L.INFO: logging.info('-------------------Finished Attacking Enemies---------------------------')
   if len(pw.EnemyPlanets())>0:
     #if L.INFO: logging.info('-------------------Activating Neutral Hunter----------------------------')
