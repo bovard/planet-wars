@@ -1,6 +1,6 @@
 import logging
 
-ALL = 1
+ALL = 0
 DEBUG = 0+ALL
 INFO = 0+ALL
 WARNING = 0+ALL

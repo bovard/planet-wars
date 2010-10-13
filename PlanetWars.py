@@ -137,7 +137,7 @@ class PlanetWars:
       con = 0
       for o in self.Planets():
         con += (self.Distance(p.PlanetID(), o.PlanetID())**2)
-      if L.DEBUG: logging.debug('setting connectedness for planet '+repr(p.PlanetID)+ ' to '+repr(con))
+      if L.DEBUG: logging.debug('setting connectedness for planet '+repr(p.PlanetID())+ ' to '+repr(con))
       p.SetConnectedness(con)
 
   def NormalizeConnectedness(self):

@@ -56,22 +56,43 @@ class PlanetWars3(PlanetWars2):
   '''
   def CommitReinforcements(self):
     if L.DEBUG: l.debug('in CommitReinforcements (PW3)')
+    if L.DEBUG: l.debug('reinforcing against currenty enemy threats')
+    min = 9999999999999999
+    closest = -1
+    for p in self.EnemyPlanets():
+      if p.NearestAlly()< min:
+        min = p.NearestAlly()
+        closest = p
+
+    if closest != -1:
+      for o in self.GetNeighbors(closest.PlanetID(), closest.NearestAlly()):
+        if o.GetOwner()==L.ALLY:
+          if L.DEBUG: l.debug('committing troops to reinforce Planet '+repr(o.PlanetID())+' due to the threat of planet '+repr(p.PlanetID()))
+          self.AllocateAlliedTroops(o, closest.NearestAlly(), -1*closest.GetNumShips(), [L.FREE_TROOPS], L.REINFORCING_TROOPS)
+          break
+
+    '''
     #reinforce against all current enemy planets
     for p in self.EnemyPlanets():
       if p.NearestAlly() < self.MaxDistance():
         for o in self.GetNeighbors(p.PlanetID(), p.NearestAlly()):
           if o.GetOwner()==L.ALLY:
-            self.AllocateAlliedTroops(o, p.NearestAlly(), p.GetNumShips(), [L.FREE_TROOPS], [L.REINFORCING_TROOPS])
+            if L.DEBUG: l.debug('committing troops to reinforce Planet '+repr(o.PlanetID())+' due to the threat of planet '+repr(p.PlanetID()))
+            self.AllocateAlliedTroops(o, p.NearestAlly(), -1*p.GetNumShips(), [L.FREE_TROOPS], L.REINFORCING_TROOPS)
             break
 
     #reinforce against planets that the enemy will take over in the future
+    if L.DEBUG: l.debug('reinforcing against future enemy threats')
     for turn in range(1, int(self.MaxDistance()/2)):
       for p in self.EnemyPlanets(turn):
         if p.GetOwner(turn-1)!=L.ENEMY and p.NearestAlly() < self.MaxDistance():
           for o in self.GetNeighbors(p.PlanetID(), p.NearestAlly()):
             if o.GetOwner()==L.ALLY:
-              self.AllocateAlliedTroops(o, p.NearestAlly(), p.GetNumShips(), [L.FREE_TROOPS], [L.REINFORCING_TROOPS])
+              if L.DEBUG: l.debug('committing troops to reinforce Planet '+repr(o.PlanetID())+' due to the threat of planet '+repr(p.PlanetID()))
+              self.AllocateAlliedTroops(o, p.NearestAlly(), -1*p.GetNumShips(turn), [L.FREE_TROOPS], L.REINFORCING_TROOPS)
               break
+    '''
+
 
 
 
@@ -107,7 +128,9 @@ class PlanetWars3(PlanetWars2):
     entries = []
     for p in self.NeutralPlanets():
       if not(p.PlanetID() in attacked):
-        if self.GetControl(p, self.MaxDistance())>0 and p.GetOwner(min(p.NearestAlly(), self.MaxDistance()))!=L.ALLY:
+        if self.GetControl(p, min(max(p.NearestAlly(), p.NearestEnemy()),self.MaxDistance()))>-10 and p.GetOwner(min(p.NearestAlly(), self.MaxDistance()))!=L.ALLY:
+          if L.DEBUG: l.debug('MAKING AN ENTRY FOR:')
+          if L.DEBUG: p.PrintSummary()
           entries.append([p.PlanetID(), self.GetNeutralRating(p)])
 
     #sort the list
@@ -120,9 +143,8 @@ class PlanetWars3(PlanetWars2):
     if len(entries)>0:
       entry = entries[0]
       p = self.GetPlanet(entry[0])
-      if L.DEBUG: l.debug('looking at neutral planet '+repr(entry))
-      if L.DEBUG: l.debug('with num_ships='+repr(p.GetNumShips())+' and regen '+repr(p.GrowthRate()))
-      for i in range(1, min(p.NearestEnemy(), self.MaxDistance())):
+      if L.DEBUG: p.PrintSummary()
+      for i in range(1, min(p.NearestEnemy(), self.MaxDistance())+1):
         to_send = -1*self.GetPlayerTroops(p, i, L.ENEMY)
         to_send -= (p.GetNumShips(i)+1)
         troops = self.GetSpecificPlayerTroops(p, i, L.ALLY, [L.FORCASTING_TROOPS, L.FREE_TROOPS])
@@ -203,11 +225,11 @@ class PlanetWars3(PlanetWars2):
     if L.DEBUG: l.debug('attacking enemy planet '+repr(planet.PlanetID()))
     if self.GetControl(planet, min(max(planet.FarthestAlly(), planet.FarthestEnemy()), end_turn))>0:
       for i in range(start_turn, end_turn+1):
-        if self.GetSpecificControl(planet, i, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ALL_TROOPS) > 0:
+        if self.GetSpecificControl(planet, i, [L.FORCASTING_TROOPS, L.REINFORCING_TROOPS, L.FREE_TROOPS], L.ALL_TROOPS) > 0:
           to_send = -1*self.GetPlayerTroops(planet, i, L.ENEMY)
           to_send -= (planet.GetNumShips(i)+1)
-          if self.GetSpecificPlayerTroops(planet, i, L.ALLY, [L.FORCASTING_TROOPS, L.FREE_TROOPS]) + to_send > 0:
-            self.AllocateAlliedTroops(planet, i, to_send, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ATTACKING_TROOPS)
+          if self.GetSpecificPlayerTroops(planet, i, L.ALLY, [L.FORCASTING_TROOPS, L.REINFORCING_TROOPS, L.FREE_TROOPS]) + to_send > 0:
+            self.AllocateAlliedTroops(planet, i, to_send, [L.FORCASTING_TROOPS, L.REINFORCING_TROOPS, L.FREE_TROOPS], L.ATTACKING_TROOPS)
           return 1
       return 0
 
@@ -267,10 +289,13 @@ class PlanetWars3(PlanetWars2):
       control += planet.GetNumShips(turn)
       if L.DEBUG: l.debug('controlled by player! controol is '+repr(control))
     for i in range(1, turn+1):
+      if L.DEBUG: l.debug('looking at radius '+repr(i))
       if planet.GetOwner(turn)==L.NEUTRAL and control > 0:
         control += planet.GrowthRate()
         if L.DEBUG: l.debug('player is in control of planet, adding regen, control is '+repr(control))
+      if L.DEBUG: l.debug('looking at neighbors at distance '+repr(i))
       for p in self.GetNeighbors(planet.PlanetID(), i):
+        if L.DEBUG: l.debug('looking at neighboring Planet '+repr(p.PlanetID())+' with a distance '+repr(self.Distance(planet.PlanetID(), p.PlanetID())))
         if p.GetOwner(turn-i)==player:
           control += p.GetNumShips(turn-i)
           if L.DEBUG: l.debug('player planet detected, adding ships, control is '+repr(control))
