@@ -89,20 +89,26 @@ class PlanetWars3(PlanetWars2):
 
   def AttackNeutrals(self):
     if L.DEBUG: l.debug('in AttackNeutrals')
+    attacked = []
     done = 0
     while not(done):
-      done = self.AttackANeutral()
+      planet_attacked = self.AttackANeutral(attacked)
+      if planet_attacked != -1:
+        attacked.append(planet_attacked)
+      else:
+        done = 1
       if L.DEBUG: l.debug('finished attacking a neutral!')
     if L.DEBUG: l.debug('leaving AttackNeutrals')
 
-  def AttackANeutral(self):
+  def AttackANeutral(self, attacked):
     if L.DEBUG: l.debug('in AttackANeutral')
 
     #choose which neturals to consider and put them in a list
     entries = []
     for p in self.NeutralPlanets():
-      if self.GetControl(p, self.MaxDistance())>0 and p.GetOwner(min(p.NearestAlly(), self.MaxDistance()))!=L.ALLY:
-        entries.append([p.PlanetID(), self.GetNeutralRating(p)])
+      if not(p.PlanetID() in attacked):
+        if self.GetControl(p, self.MaxDistance())>0 and p.GetOwner(min(p.NearestAlly(), self.MaxDistance()))!=L.ALLY:
+          entries.append([p.PlanetID(), self.GetNeutralRating(p)])
 
     #sort the list
     if L.DEBUG: l.debug('entries completed')
@@ -116,7 +122,7 @@ class PlanetWars3(PlanetWars2):
       p = self.GetPlanet(entry[0])
       if L.DEBUG: l.debug('looking at neutral planet '+repr(entry))
       if L.DEBUG: l.debug('with num_ships='+repr(p.GetNumShips())+' and regen '+repr(p.GrowthRate()))
-      for i in range(1, p.NearestEnemy()):
+      for i in range(1, min(p.NearestEnemy(), self.MaxDistance())):
         to_send = -1*self.GetPlayerTroops(p, i, L.ENEMY)
         to_send -= (p.GetNumShips(i)+1)
         troops = self.GetSpecificPlayerTroops(p, i, L.ALLY, [L.FORCASTING_TROOPS, L.FREE_TROOPS])
@@ -125,9 +131,9 @@ class PlanetWars3(PlanetWars2):
           if L.DEBUG: l.debug('we can take it over! allocating troops')
           self.AllocateAlliedTroops(p, i, to_send, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ATTACKING_TROOPS)
           if L.DEBUG: l.debug('we allocated attacking troops')
-          return 0
-      return 1
-    return 1
+          return p.PlanetID()
+      return -1
+    return -1
 
 
   def BeeAttackNeutrals(self):
