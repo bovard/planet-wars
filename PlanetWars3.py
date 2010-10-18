@@ -232,11 +232,11 @@ class PlanetWars3(PlanetWars2):
     if L.DEBUG: l.debug('attacking enemy planet '+repr(planet.PlanetID()))
     if self.GetControl(planet, min(max(planet.FarthestAlly(), planet.FarthestEnemy()), end_turn))>0:
       for i in range(start_turn, end_turn+1):
-        if self.GetSpecificControl(planet, i, [L.FORCASTING_TROOPS, L.REINFORCING_TROOPS, L.FREE_TROOPS], L.ALL_TROOPS) > 0:
+        if self.GetSpecificControl(planet, i, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ALL_TROOPS) > 0:
           to_send = -1*self.GetPlayerTroops(planet, i, L.ENEMY)
           to_send -= (planet.GetNumShips(i)+1)
-          if self.GetSpecificPlayerTroops(planet, i, L.ALLY, [L.FORCASTING_TROOPS, L.REINFORCING_TROOPS, L.FREE_TROOPS]) + to_send > 0:
-            self.AllocateAlliedTroops(planet, i, to_send, [L.FORCASTING_TROOPS, L.REINFORCING_TROOPS, L.FREE_TROOPS], L.ATTACKING_TROOPS)
+          if self.GetSpecificPlayerTroops(planet, i, L.ALLY, [L.FORCASTING_TROOPS, L.FREE_TROOPS]) + to_send > 0:
+            self.AllocateAlliedTroops(planet, i, to_send, [L.FORCASTING_TROOPS, L.FREE_TROOPS], L.ATTACKING_TROOPS)
           return 1
       return 0
 
