@@ -1,4 +1,3 @@
-
 from PlanetWars2 import PlanetWars2
 from ABC import ABC
 import logging as l
@@ -112,14 +111,11 @@ class PlanetWars3(PlanetWars2):
   def AttackNeutrals(self):
     if L.DEBUG: l.debug('in AttackNeutrals')
     attacked = []
-    spent = 0
-    limit = self.GetTroopBalance()+self.GetPlayerRegen()*(float(self.GetGlobalFarthestEnemy()+2*self.GetGlobalNearestEnemy())/3)
     done = 0
-    while spent <= limit and not(done) and limit > 0:
+    while not(done):
       planet_attacked = self.AttackANeutral(attacked)
       if planet_attacked != -1:
         attacked.append(planet_attacked)
-        spent += self.GetPlanet(planet_attacked).GetNumShips()+1
       else:
         done = 1
       if L.DEBUG: l.debug('finished attacking a neutral!')
@@ -201,13 +197,10 @@ class PlanetWars3(PlanetWars2):
   def GetNeutralRating(self, planet):
     if L.DEBUG: l.debug('in GetNeutralRating for planet '+repr(planet.PlanetID())+' with troops = '+repr(planet.GetNumShips()) + ' and regen '+repr(planet.GrowthRate()))
     calc = float(planet.GetNumShips())/(float(planet.GrowthRate())+.0001)+planet.NearestAlly()
-    if L.DEBUG: l.debug('after the initial calc= '+repr(calc))
+    if L.DEBUG: l.debug('halfway, calc= '+repr(calc))
     calc *= planet.GetConnectedness()
-    if L.DEBUG: l.debug('after connectiveness calc = '+repr(calc))
-    calc *= 0.25*(1-planet.GetNeighborWeight())
-    if L.DEBUG: l.debug('after neighbor weight, calc = '+repr(calc))
+    if L.DEBUG: l.debug('leaving, calc = '+repr(calc))
     calc /= (float(planet.GrowthRate())+.0001)
-    if L.DEBUG: l.debug('after growth weight, calc = '+repr(calc))
     return calc
 
   def AttackEnemies(self):

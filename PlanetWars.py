@@ -37,7 +37,6 @@ class PlanetWars:
     if L.INFO: logging.info('done with distances')
     if L.INFO: logging.info('initialiaing and calculatings neighbors')
     self.InitNeighbors()
-    self.InitNeighborRegenWeights()
     if L.INFO: logging.info('initializing arrivals')
     self.InitArrivals()
     if L.INFO: logging.info('done with arrivals')
@@ -149,24 +148,6 @@ class PlanetWars:
     for p in self.Planets():
       p.SetConnectedness(float(p.GetConnectedness())/max)
 
-  def InitNeighborRegenWeights(self):
-    if L.DEBUG: logging.debug('in InitNeighborRegenWeights')
-    max = -1
-    for p in self.Planets():
-      weight = 0
-      divisor = 1
-      for i in range(1, self.MaxDistance()):
-        divisor *= 2
-        for o in self.GetNeighbors(p.PlanetID(), i):
-          weight += (float(o.GrowthRate())/divisor)
-      p.SetNeighborWeight(weight)
-      if weight > max:
-        max = weight
-
-    if L.DEBUG: logging.debug('normalizing neighbor regen weight with max='+repr(max))
-    for p in self.Planets():
-      p.SetNeighborWeight((p.GetNeighborWeight()/max))
-
 
   def InitializeLaunchQueue(self):
     if L.DEBUG: logging.debug('initializing launch queue')
@@ -253,7 +234,7 @@ class PlanetWars:
     return diff
 
 
-  def GetPlayerRegen(self, turn=0,  player = L.ALLY):
+  def GetPlayerRegen(self, player = L.ALLY, turn=0):
     regen = 0
     for p in self.GetPlayerPlanets(player, turn):
       regen += p.GrowthRate()
@@ -262,7 +243,7 @@ class PlanetWars:
   def GetPlayerPlanets(self, player = L.ALLY, turn=0):
     planets = []
     for p in self._planets:
-      if p.GetOwner(turn)==player:
+      if p.GetOwner[turn]==player:
         planets.append(p)
     return planets
 
@@ -285,7 +266,7 @@ class PlanetWars:
     self._farthest_enemy=-1
     for p in self._planets:
       self._calc_neighbors(p, turn, self._max_distance)
-      if p.GetOwner(turn)==1:
+      if p.GetOwner(turn)==1 or p.GetOwner(turn)==2:
         if p.NearestEnemy(0)<self._nearest_enemy:
           self._nearest_enemy=p.NearestEnemy(0)
         if p.FarthestEnemy(0)>self._farthest_enemy:
