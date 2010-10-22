@@ -111,6 +111,9 @@ class PlanetWars3(PlanetWars2):
   def AttackNeutrals(self):
     if L.DEBUG: l.debug('in AttackNeutrals')
     attacked = []
+    for p in self._planets:
+      if p.GrowthRate()==0:
+        attacked.append(p.PlanetID())
     done = 0
     while not(done):
       planet_attacked = self.AttackANeutral(attacked)
