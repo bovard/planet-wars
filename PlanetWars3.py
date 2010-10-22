@@ -1,4 +1,3 @@
-from old_versions.v15_5.Planet import GetNumShips
 from PlanetWars2 import PlanetWars2
 from ABC import ABC
 import logging as l
@@ -112,14 +111,11 @@ class PlanetWars3(PlanetWars2):
   def AttackNeutrals(self):
     if L.DEBUG: l.debug('in AttackNeutrals')
     attacked = []
-    spent = 0
-    limit = self.GetTroopBalance()+self.GetPlayerRegen()*(float(self.GetGlobalFarthestEnemy()+2*self.GetGlobalNearestEnemy())/3)
     done = 0
-    while spent <= limit and not(done):
+    while not(done):
       planet_attacked = self.AttackANeutral(attacked)
       if planet_attacked != -1:
         attacked.append(planet_attacked)
-        spent += self.GetPlanet(planet_attacked).GetNumShips()+1
       else:
         done = 1
       if L.DEBUG: l.debug('finished attacking a neutral!')

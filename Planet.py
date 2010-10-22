@@ -6,7 +6,6 @@ class Planet:
   def __init__(self, planet_id, owner, num_ships, growth_rate, x, y):
     if L.DEBUG: logging.debug('creating a planet')
     self._connectedness = 0
-    self._neighbor_regen = 0
     self._planet_id = planet_id
     self._owner = []
     self._owner.append(owner)
@@ -42,12 +41,6 @@ class Planet:
     self._reinforce_demand = 0
 
     if L.DEBUG: logging.debug('done')
-
-  def SetNeighborWeight(self, weight):
-    self._neighbor_regen = weight
-
-  def GetNeighborWeight(self):
-    return self._neighbor_regen
 
   def PullOutReinforcing(self):
     for i in range(len(self._reinforcing_troops)):
