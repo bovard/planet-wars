@@ -183,7 +183,7 @@ def DoTurn(pw, turn):
   #AttackEnemies(pw)
   pw.AttackEnemies()
   if L.INFO: logging.info('-------------------Finished Attacking Enemies---------------------------')
-  if len(pw.EnemyPlanets())>0 and (pw.GetRegenBalance(pw.MaxDistance()-1) < 1 or pw.GetRegenBalance() < 1):
+  if len(pw.EnemyPlanets())>0 and (pw.GetRegenBalance(pw.MaxDistance()-1) < 5 or pw.GetRegenBalance() < 0):
     #if L.INFO: logging.info('-------------------Activating Neutral Hunter----------------------------')
     #to_attack = pw.RecursiveNeutralHunter(int(pw.MaxDistance()/2) )
     #if L.WARNING: logging.warning('Neutral Hunter said to attack '+repr(to_attack))
