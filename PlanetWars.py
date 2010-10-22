@@ -262,7 +262,7 @@ class PlanetWars:
   def GetPlayerPlanets(self, player = L.ALLY, turn=0):
     planets = []
     for p in self._planets:
-      if p.GetOwner(turn)==player:
+      if p.GetOwner[turn]==player:
         planets.append(p)
     return planets
 

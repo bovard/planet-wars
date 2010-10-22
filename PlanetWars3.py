@@ -1,4 +1,4 @@
-
+from old_versions.v15_5.Planet import GetNumShips
 from PlanetWars2 import PlanetWars2
 from ABC import ABC
 import logging as l
