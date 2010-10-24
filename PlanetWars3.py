@@ -60,9 +60,9 @@ class PlanetWars3(PlanetWars2):
     to_reinforce_against = []
     for p in self.EnemyPlanets():
       if p.GetNumShips()>=4*p.GrowthRate():
-        to_reinfroce_against.append(p)
+        to_reinforce_against.append(p)
 
-    for p in to_reinfroce_against:
+    for p in to_reinforce_against:
       for o in self.GetNeighbors(p.PlanetID(), p.NearestAlly()):
         if o.GetOwner()==L.ALLY:
           if L.DEBUG: l.debug('committing troops to reinforce Planet '+repr(o.PlanetID())+' due to the threat of planet '+repr(p.PlanetID()))
