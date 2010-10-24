@@ -222,7 +222,7 @@ class Planet:
   def CalcFreeTroops(self, turn, update=1):
     if L.DEBUG: logging.debug('in CalcFreeTroops')
     self.PrintSummary()
-    levels = [0, self._allied_arrivals[turn], self._enemy_arrivals[turn]]
+    levels = [0, self._allied_arrivals[turn]+self._allied_reinforcements[turn], self._enemy_arrivals[turn]]
     if self._owner[turn-1] != 0:
       levels[self._owner[turn-1]] += self._growth_rate
     else:

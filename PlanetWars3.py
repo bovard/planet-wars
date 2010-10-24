@@ -384,10 +384,11 @@ class PlanetWars3(PlanetWars2):
     if L.DEBUG: planet.PrintSummary()
     if ships >= 0:
       planet.SetSpecificTroops(target_list_id, turn, -1*to_commit + ships)
+      planet.SimulateAttack(turn)
       if L.DEBUG: l.debug('leaving AllocateTroops with ships='+repr(ships)+ '(sucess)!')
       return ships
     else:
-      planet.SetSpecificTroops(target_list_id, turn, -1*to_commit - ships)
+      planet.SetSpecificTroops(target_list_id, turn, -1*to_commit + ships)
       if L.ERROR: l.error('leaving AllocateTroops with ships='+repr(ships)+ '(FAILURE)!')
       return ships
 
