@@ -57,42 +57,17 @@ class PlanetWars3(PlanetWars2):
   def CommitReinforcements(self):
     if L.DEBUG: l.debug('in CommitReinforcements (PW3)')
     if L.DEBUG: l.debug('reinforcing against currenty enemy threats')
-    min = 9999999999999999
-    closest = -1
+    to_reinforce_against = []
     for p in self.EnemyPlanets():
-      if p.NearestAlly()< min:
-        min = p.NearestAlly()
-        closest = p
+      if p.GetNumShips()>=4*p.GrowthRate():
+        to_reinfroce_against.append(p)
 
-    if closest != -1:
-      for o in self.GetNeighbors(closest.PlanetID(), closest.NearestAlly()):
+    for p in to_reinfroce_against:
+      for o in self.GetNeighbors(p.PlanetID(), p.NearestAlly()):
         if o.GetOwner()==L.ALLY:
           if L.DEBUG: l.debug('committing troops to reinforce Planet '+repr(o.PlanetID())+' due to the threat of planet '+repr(p.PlanetID()))
-          self.AllocateAlliedTroops(o, closest.NearestAlly(), -1*closest.GetNumShips(), [L.FREE_TROOPS], L.REINFORCING_TROOPS)
+          self.AllocateAlliedTroops(o, p.NearestAlly(), -1*p.GetNumShips(), [L.FREE_TROOPS], L.REINFORCING_TROOPS)
           break
-
-    '''
-    #reinforce against all current enemy planets
-    for p in self.EnemyPlanets():
-      if p.NearestAlly() < self.MaxDistance():
-        for o in self.GetNeighbors(p.PlanetID(), p.NearestAlly()):
-          if o.GetOwner()==L.ALLY:
-            if L.DEBUG: l.debug('committing troops to reinforce Planet '+repr(o.PlanetID())+' due to the threat of planet '+repr(p.PlanetID()))
-            self.AllocateAlliedTroops(o, p.NearestAlly(), -1*p.GetNumShips(), [L.FREE_TROOPS], L.REINFORCING_TROOPS)
-            break
-
-    #reinforce against planets that the enemy will take over in the future
-    if L.DEBUG: l.debug('reinforcing against future enemy threats')
-    for turn in range(1, int(self.MaxDistance()/2)):
-      for p in self.EnemyPlanets(turn):
-        if p.GetOwner(turn-1)!=L.ENEMY and p.NearestAlly() < self.MaxDistance():
-          for o in self.GetNeighbors(p.PlanetID(), p.NearestAlly()):
-            if o.GetOwner()==L.ALLY:
-              if L.DEBUG: l.debug('committing troops to reinforce Planet '+repr(o.PlanetID())+' due to the threat of planet '+repr(p.PlanetID()))
-              self.AllocateAlliedTroops(o, p.NearestAlly(), -1*p.GetNumShips(turn), [L.FREE_TROOPS], L.REINFORCING_TROOPS)
-              break
-    '''
-
 
 
 
@@ -383,12 +358,14 @@ class PlanetWars3(PlanetWars2):
           if L.DEBUG: p.PrintSummary()
     if L.DEBUG: planet.PrintSummary()
     if ships >= 0:
-      planet.SetSpecificTroops(target_list_id, turn, -1*to_commit + ships)
-      planet.SimulateAttack(turn)
+      if dest_list_id!=L.REINFORCING_TROOPS:
+        planet.SetSpecificTroops(target_list_id, turn, -1*to_commit + ships)
+        planet.SimulateAttack(turn)
       if L.DEBUG: l.debug('leaving AllocateTroops with ships='+repr(ships)+ '(sucess)!')
       return ships
     else:
-      planet.SetSpecificTroops(target_list_id, turn, -1*to_commit + ships)
+      if dest_list_id!=L.REINFORCING_TROOPS:
+        planet.SetSpecificTroops(target_list_id, turn, -1*to_commit + ships)
       if L.ERROR: l.error('leaving AllocateTroops with ships='+repr(ships)+ '(FAILURE)!')
       return ships
 
